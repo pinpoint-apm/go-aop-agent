@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>pinpoint-python demo</title>
+</head>
+
+<form>
+
+<h3>Simple server</h3>
+
+<form method="get" action="app.py">
+    <table border="1">
+        <tr>
+            <th>Description</th>
+            <th>Link</th>
+        </tr>
+        <tr>
+            <th>
+                Call common function.
+            </th>
+            <th>
+                <a href="/test_args_return">click me</a>
+            </th>
+        </tr>
+
+        <tr>
+            <th>
+                Call Recursion
+            </th>
+            <th>
+                <a href="/test_recursion">click me</a>
+            </th>
+        </tr>
+
+        <tr>
+            <th>
+                Test Mysql
+            </th>
+            <th>
+                <a href="/test_mysql">click me</a>
+            </th>
+        </tr>
+
+        <tr>
+            <th>
+                Test Redis
+            </th>
+            <th>
+                <a href="/test_redis">click me</a>
+            </th>
+        </tr>
+
+        <tr>
+            <th>
+                Test Mongo
+            </th>
+            <th>
+                <a href="/test_mongo">click me</a>
+            </th>
+        </tr>
+    </table>
+</form>
+
+    <h3>Error and exception</h3>
+
+    <form method="get" action="app.py">
+        <table border="2">
+            <tr>
+                <th>Link</th>
+                <th>Description</th>
+            </tr>
+
+            <tr>
+                <th>
+                    Test exception.
+                </th>
+
+                <th>
+                    <a href="/test_exception">click me</a>
+                </th>
+            </tr>
+
+            <tr>
+                <th>
+                    Call exception in recursion
+                </th>
+
+                <th>
+                    <a href="/test_exception_in_recursion">click me</a>
+                </th>
+            </tr>
+        </table>
+    </form>
+
+    <h3>Call Remote</h3>
+    <form method="get" action="/call_remote">
+        remote url: <input type="text"  name="remote" value="http://www.baidu.com"/>
+        <button type="submit">Call Remote</button>
+    </form>
+
+</body>
+
+</html>
