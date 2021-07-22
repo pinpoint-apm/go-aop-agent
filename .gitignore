@@ -1,0 +1,13 @@
+testapps/go/server
+*.o
+test
+vendor
+server
+.idea
+.gdb_history
+core.*
+pinpoint/pinpoint.test
+test.go
+*.txt
+*.test
+.vscode
