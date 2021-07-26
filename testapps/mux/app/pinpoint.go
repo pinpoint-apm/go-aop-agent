@@ -44,7 +44,7 @@ func onBefore(ctx context.Context, id common.TraceIdType, funcName string, arg .
 	return ctx
 }
 
-func onEnd(id common.TraceIdType, res interface{}) {
+func onEnd(id common.TraceIdType, res ...interface{}) {
 	// common.Logf("call onEnd")
 
 	addClueSFunc := func(key, value string) {
