@@ -10,7 +10,6 @@ require (
 	go.mongodb.org/mongo-driver v1.5.3
 	naver/app v0.0.0-00010101000000-000000000000
 	github.com/pinpoint-apm/go-aop-agent v0.0.1
-	github.com/pinpoint-apm/go-aop-agent/libs/example v0.0.0-00010101000000-000000000000
 	github.com/pinpoint-apm/go-aop-agent/libs/httpClient v0.0.0-20210610105738-6027a2ff599f
 	github.com/pinpoint-apm/go-aop-agent/libs/mongo v0.0.0-20210630061937-33ab55fd140c
 	github.com/pinpoint-apm/go-aop-agent/libs/redisv8 v0.0.0-00010101000000-000000000000 // indirect
@@ -20,7 +19,6 @@ require (
 
 replace (
 	github.com/pinpoint-apm/go-aop-agent => ../../
-	github.com/pinpoint-apm/go-aop-agent/libs/example => ../../libs/example
 	github.com/pinpoint-apm/go-aop-agent/libs/httpClient => ../../libs/httpClient
 	github.com/pinpoint-apm/go-aop-agent/libs/mongo => ../../libs/mongo
 	github.com/pinpoint-apm/go-aop-agent/libs/redisv8 => ../../libs/redisv8
