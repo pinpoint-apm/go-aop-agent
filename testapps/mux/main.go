@@ -161,21 +161,21 @@ func TestLambdaFuncHandler(w http.ResponseWriter, r *http.Request) {
 
 func TestDecoratorFuncHandler(w http.ResponseWriter, r *http.Request) {
   d := app.Dinner{app.Cooker{}, app.Rice{}, app.Water{}}
-  res28, res28, res29, res30, res31 :=d.TestDecoratorFunc(r.Context())
-  fmt.Fprint(w,  res28, res28, res29, res30, res31)
+  res28, res29, res30, res31, res32 :=d.TestDecoratorFunc(r.Context())
+  fmt.Fprint(w, res28, res29, res30, res31, res32)
 
   e := app.Rice{}
-  res32 := e.WashRice(r.Context())
-  fmt.Fprint(w, res0)
+  res33 := e.WashRice(r.Context())
+  fmt.Fprint(w, res33)
 
   a :=app.Water{}
-  res33 := a.AddWater(r.Context())
+  res34 := a.AddWater(r.Context())
   fmt.Fprintln(w, res33)
 }
 
 func TestAbstractFuncHandler(w http.ResponseWriter, r *http.Request) {
   b :=app.Book{"RED"}
-  res34 :=b.TestAbstractFunc(r.Context())
+  res35 :=b.TestAbstractFunc(r.Context())
   fmt.Fprint(w, res34)
 }
 

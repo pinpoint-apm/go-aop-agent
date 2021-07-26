@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
-package app
+
+ package app
 
 import (
 	"fmt"
@@ -44,21 +44,22 @@ func (C Cooker) TestDecoratorFunc(ctx context.Context) {
 func (R Rice) TestDecoratorFunc(ctx context.Context) {
 	fmt.Println("do sth before washing rice")
 	R.WashRice(ctx)
-	//return "do sth before washing rice" 
 }
 
-func (R Rice) WashRice(ctx context.Context) {
+//go:noinline
+func (R Rice) WashRice(ctx context.Context) string{
 	fmt.Println("wash rice")
+	return "wash rice"
 }
 
-func (W Water) TestDecoratorFunc(ctx context.Context) {
+func (W Water) TestDecoratorFunc(ctx context.Context){
 	fmt.Println("do sth before adding water")
 	W.AddWater(ctx)
-	//return "do sth before adding water"
 }
-
-func (W Water) AddWater(ctx context.Context) {
+//go:noinline
+func (W Water) AddWater(ctx context.Context) string{
 	fmt.Println("add water")
+	return "add water"
 }
 
 func (D Dinner) TestDecoratorFunc(ctx context.Context) (string, string, string, string, string){
@@ -66,5 +67,5 @@ func (D Dinner) TestDecoratorFunc(ctx context.Context) (string, string, string, 
 	D.R.TestDecoratorFunc(ctx)
 	D.W.TestDecoratorFunc(ctx)
 	return "wash the pot\n", "do sth before washing rice\n", "wash rice\n", "do sth before adding water\n", "add water"
-
+	
 }
