@@ -773,7 +773,7 @@ void test_32_range()
 
 static const char* Msg="I'm string";
 
-const char* retStr(){
+static const char* retStr(){
     return Msg;
 }
 

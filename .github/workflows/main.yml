@@ -8,6 +8,11 @@ jobs:
     container: ghcr.io/pinpoint-apm/pinpoint-c-agent/golang-build-env-1.16:latest
     steps:
       - uses: actions/checkout@v2
+      - name: test -NTEST
+        run : |
+          cd aop
+          make
+          ./test
       - name: api test
         run: |
           cd common
