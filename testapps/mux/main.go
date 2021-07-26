@@ -56,6 +56,11 @@ var globalv string = "globle variable"
 
 const LENGTH int = 10
 
+func TestUserFuncHandler(w http.ResponseWriter, r *http.Request) {
+	res0 :=app.TestUserFunc(r.Context(),35, 42)
+	fmt.Fprint(w,res0)
+}
+
 func TestCommonFuncHandler(w http.ResponseWriter, r *http.Request) {
 
 	res1 := app.TestComFunc(r.Context(), 6.66) //float
@@ -126,6 +131,62 @@ func TestCommonFuncHandler(w http.ResponseWriter, r *http.Request) {
 	res18 := app.TestReturn(r.Context()) //return private,public,constant,func,globle,local
 	res18(3)
 	fmt.Fprintf(w, "type of %v tested!\n", res18)
+}
+
+func TestHighFuncHandler(w http.ResponseWriter, r *http.Request) {
+	//fmt.Println(reflect.ValueOf(app.Add).Type())
+	 res19 :=app.TestHighFunc(r.Context(), 5, 8, app.Add)
+	 fmt.Fprint(w, res19)
+
+	 res20 :=app.TestHighFunc(r.Context(), 5, 8, app.Mul)
+	 fmt.Fprint(w, res20) 
+	 
+	 res21 :=app.Add(r.Context(),12, 15)
+	 fmt.Fprint(w, res21)
+
+	 res22 :=app.Mul(r.Context(),12, 15)
+	 fmt.Fprint(w, res22)
+}
+
+func TestInheritFuncHandler(w http.ResponseWriter, r *http.Request) {
+  var s app.Student = app.Student{app.Person{Name:"Tom\n", Sex:"男\n", Age:18}}
+  res23, res24, res25 := s.TestInheritFunc(r.Context())
+  fmt.Fprint(w, res23, res24, res25)
+}
+
+func TestLambdaFuncHandler(w http.ResponseWriter, r *http.Request) {
+  res26, res27:= app.TestLambdaFunc(r.Context())
+  fmt.Fprint(w, res26, res27)
+}
+
+func TestDecoratorFuncHandler(w http.ResponseWriter, r *http.Request) {
+  d := app.Dinner{app.Cooker{}, app.Rice{}, app.Water{}}
+  res28, res28, res29, res30, res31 :=d.TestDecoratorFunc(r.Context())
+  fmt.Fprint(w,  res28, res28, res29, res30, res31)
+
+  e := app.Rice{}
+  res32 := e.WashRice(r.Context())
+  fmt.Fprint(w, res0)
+
+  a :=app.Water{}
+  res33 := a.AddWater(r.Context())
+  fmt.Fprintln(w, res33)
+}
+
+func TestAbstractFuncHandler(w http.ResponseWriter, r *http.Request) {
+  b :=app.Book{"RED"}
+  res34 :=b.TestAbstractFunc(r.Context())
+  fmt.Fprint(w, res34)
+}
+
+func TestGeneratorFuncHandler(w http.ResponseWriter, r *http.Request) {
+  var a chan int
+  a = make (chan int)
+  go app.TestGeneratorFunc (r.Context(), a)
+
+  for i := range a{
+	  fmt.Fprint(w, i)
+  }
 }
 
 func TestRecursionHandler(w http.ResponseWriter, r *http.Request) {
@@ -320,7 +381,14 @@ func main() {
 	router.Use(pinpoint.PinpointMuxMiddleWare)
 
 	router.HandleFunc("/", HomeHandler)
+	router.HandleFunc("/test_user_func", TestUserFuncHandler)
 	router.HandleFunc("/test_args_return", TestCommonFuncHandler)
+	router.HandleFunc("/test_high-order_func", TestHighFuncHandler)
+	router.HandleFunc("/test_inherit_func", TestInheritFuncHandler)
+	router.HandleFunc("/test_lambda_func", TestLambdaFuncHandler)
+	router.HandleFunc("/test_decorator_func", TestDecoratorFuncHandler)
+	router.HandleFunc("/test_abstract_func", TestAbstractFuncHandler)
+	router.HandleFunc("/test_generator_func", TestGeneratorFuncHandler)
 	router.HandleFunc("/test_recursion", TestRecursionHandler)
 	router.HandleFunc("/test_mongo", TestMongoHandler)
 	router.HandleFunc("/test_mysql", TestMysqlHandler)
