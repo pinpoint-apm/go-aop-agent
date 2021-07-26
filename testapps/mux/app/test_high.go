@@ -18,7 +18,7 @@ package app
 
 import "context"
 
-type TestHighType func(context.Contextint, int) int
+type TestHighType func(context.Context, int) int
 
 //go:noinline
 func Add(ctx context.Context, a, b int) int {
@@ -31,6 +31,6 @@ func Mul(ctx context.Context, a, b int) int {
 }
 
 //go:noinline
-func TestHighFunc(ctx context.Context, a, b int, T func(context.Contextint, int, int) int) int {
+func TestHighFunc(ctx context.Context, a, b int, T func(context.Context, int, int) int) int {
 	return T(ctx, a, b)
 }
