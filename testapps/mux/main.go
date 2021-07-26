@@ -176,7 +176,7 @@ func TestDecoratorFuncHandler(w http.ResponseWriter, r *http.Request) {
 func TestAbstractFuncHandler(w http.ResponseWriter, r *http.Request) {
   b :=app.Book{"RED"}
   res35 :=b.TestAbstractFunc(r.Context())
-  fmt.Fprint(w, res34)
+  fmt.Fprint(w, res35)
 }
 
 func TestGeneratorFuncHandler(w http.ResponseWriter, r *http.Request) {
