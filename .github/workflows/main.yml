@@ -16,9 +16,12 @@ jobs:
       - name: api test
         run: |
           cd common
-          go test -v
+          go test -v -coverprofile cover.out .
           cd ../aop
-          go test -v
+          go test -v -v -coverprofile cover.out .
+      - name: Codecovage
+        uses: codecov/codecov-action@v1
+
       - name: build mux
         run: |
           cd testapps/mux
