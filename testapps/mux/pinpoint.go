@@ -32,7 +32,7 @@ func init() {
 
 func init_pinpoint() {
 	common.Pinpoint_enable_debug_report(true)
-	common.Pinpoint_set_collect_agent_host("tcp:test-pinpoint-collector-agent-0.esfarm-pinpoint.svc.ai2.io.navercorp.com:9999")
+	common.Pinpoint_set_collect_agent_host("tcp:127.0.0.1:9999")
 	common.Pinpoint_set_trace_limit(10)
 	common.Appname = "go-agent1"
 	common.Appid = "Go-Agent1"
