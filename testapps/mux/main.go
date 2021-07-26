@@ -170,7 +170,7 @@ func TestDecoratorFuncHandler(w http.ResponseWriter, r *http.Request) {
 
   a :=app.Water{}
   res34 := a.AddWater(r.Context())
-  fmt.Fprintln(w, res33)
+  fmt.Fprintln(w, res34
 }
 
 func TestAbstractFuncHandler(w http.ResponseWriter, r *http.Request) {
