@@ -31,7 +31,7 @@
     
     func init_pinpoint() {
         common.Pinpoint_enable_debug_report(true) //open pinpoint debug log
-        common.Pinpoint_set_collect_agent_host("tcp:0.0.0.0@9999") // set the collector agent(Installed in step of `Install Collector Agent`), it should be consistent with `PP_ADDRESS`
+        common.Pinpoint_set_collect_agent_host("tcp:127.0.0.1@9999") // set the collector agent(Installed in step of `Install Collector Agent`), it should be consistent with `PP_ADDRESS`
         common.Pinpoint_set_trace_limit(10) // set the sample rate: `-1`: not limit, all requests with be sampled. `0`: not sample, no requets will be sampled. `n`: n requests will be sampled every seconed.
         common.Appname = "go-agent1" // set Appname
         common.Appid = "Go-Agent1" // set Appid
