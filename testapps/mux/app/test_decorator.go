@@ -37,10 +37,12 @@ type Dinner struct {
 	W Water
 }
 
+//go:noinline
 func (C Cooker) TestDecoratorFunc(ctx context.Context) {
 	fmt.Println("wash the pot") 
 }
 
+//go:noinline
 func (R Rice) TestDecoratorFunc(ctx context.Context) {
 	fmt.Println("do sth before washing rice")
 	R.WashRice(ctx)
@@ -52,6 +54,7 @@ func (R Rice) WashRice(ctx context.Context) string{
 	return "wash rice"
 }
 
+//go:noinline
 func (W Water) TestDecoratorFunc(ctx context.Context){
 	fmt.Println("do sth before adding water")
 	W.AddWater(ctx)
@@ -62,6 +65,7 @@ func (W Water) AddWater(ctx context.Context) string{
 	return "add water"
 }
 
+//go:noinline
 func (D Dinner) TestDecoratorFunc(ctx context.Context) (string, string, string, string, string){
 	D.C.TestDecoratorFunc(ctx)
 	D.R.TestDecoratorFunc(ctx)

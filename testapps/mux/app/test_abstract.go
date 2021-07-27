@@ -29,10 +29,12 @@ type Book struct{
 	Color string
 }
 
+//go:noinline
 func Function(In Info){
 	In.TestAbstractFunc()
 }
 
+//go:noinline
 func (B Book) TestAbstractFunc(ctx context.Context) string{
 	fmt.Println("the book color is", B.Color)
 	return "the book color is RED"

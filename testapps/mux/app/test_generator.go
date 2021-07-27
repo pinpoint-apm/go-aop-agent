@@ -20,12 +20,14 @@ import (
 	//"fmt"
 	"context"
 )
+
+//go:noinline
 func TestGeneratorFunc(ctx context.Context, c chan int) (int, int, int, int) {
 	for i := 0; i < 4; i++ {
 		c <- i
 	}
 	close(c)
 
-	return 0, 1, 2, 3
+	return c
 }
 

@@ -203,12 +203,12 @@ func hook_testinheritfunc(p Person, ctx context.Context) (string, string, int){
 
 ////////////////////////app.TestLambdaFunc//////////////////////
 //go:noinline
-func hook_testlambdafunc_trampoline(ctx context.Context) (string, int) {
-    return "ABC\n", 0
+func hook_testlambdafunc_trampoline(ctx context.Context) int {
+    return 0
 }
 
 //go:noinline
-func hook_testlambdafunc(ctx context.Context) (string, int) {
+func hook_testlambdafunc(ctx context.Context) int{
     funcName := get_func_name(TestLambdaFunc)
     if parentId, err := common.GetParentId(ctx); err != nil {
 		     common.Logf("parentId is not traceId type. Dropped")
@@ -219,9 +219,9 @@ func hook_testlambdafunc(ctx context.Context) (string, int) {
 
 		     newCtx := onBefore(ctx, subTraceId, funcName)
 		     response, response1 := hook_testlambdafunc_trampoline(newCtx)
-		     onEnd(subTraceId, response,response1)
-		     return response, response1
-    }
+		     onEnd(subTraceId, response)
+		     return response
+git     }
 }
 
 ////////////////////////app.TestDecoratorFunc//////////////////////
