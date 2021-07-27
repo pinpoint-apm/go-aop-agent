@@ -218,10 +218,10 @@ func hook_testlambdafunc(ctx context.Context) int{
 		     defer common.Pinpoint_end_trace(subTraceId)
 
 		     newCtx := onBefore(ctx, subTraceId, funcName)
-		     response, response1 := hook_testlambdafunc_trampoline(newCtx)
+		     response := hook_testlambdafunc_trampoline(newCtx)
 		     onEnd(subTraceId, response)
 		     return response
-git     }
+    }
 }
 
 ////////////////////////app.TestDecoratorFunc//////////////////////

@@ -22,7 +22,7 @@ import (
 )
 
 //go:noinline
-func TestGeneratorFunc(ctx context.Context, c chan int) (int, int, int, int) {
+func TestGeneratorFunc(ctx context.Context, c chan int) chan int {
 	for i := 0; i < 4; i++ {
 		c <- i
 	}

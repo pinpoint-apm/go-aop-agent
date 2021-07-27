@@ -17,7 +17,6 @@
 package app
 
 import (
-	"fmt"
 	"context"
 )
 
