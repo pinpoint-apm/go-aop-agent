@@ -155,8 +155,12 @@ func TestInheritFuncHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestLambdaFuncHandler(w http.ResponseWriter, r *http.Request) {
-  res26, res27:= app.TestLambdaFunc(r.Context())
-  fmt.Fprint(w, res26, res27)
+	f1 := func(){
+		i := app.TestLambdaFunc(r.Context())
+		fmt.Println(i)
+	}
+	f1()
+   fmt.Fprint(w, "访问成功")
 }
 
 func TestDecoratorFuncHandler(w http.ResponseWriter, r *http.Request) {

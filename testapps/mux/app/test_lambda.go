@@ -17,25 +17,12 @@
 package app
 
 import (
-	"fmt"
 	"context"
 )
 
-func TestLambdaFunc(ctx context.Context) (string, int){
-	a, str := "Hello\n", 10
-	
-
-	f1 := func(){
-		fmt.Println(a)
-		fmt.Println(str)
-	}
-	f1()
-
-	type FuncType func()
-	var f2 FuncType = f1
-	f2()
-
-	return a, str
-
+//go:noinline
+func TestLambdaFunc(ctx context.Context) int{
+	a :=10
+	return a
 }
 

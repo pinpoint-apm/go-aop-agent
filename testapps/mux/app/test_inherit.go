@@ -27,6 +27,7 @@ type Person struct{
 	Age int
 }
 
+//go:noinline
 func (p Person) TestInheritFunc(ctx context.Context) (string, string,int){
     fmt.Println(p.Name, "\n", p.Sex, "\n", p.Age)
     return p.Name, p.Sex, p.Age
