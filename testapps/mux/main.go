@@ -161,7 +161,6 @@ func TestLambdaFuncHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	f1()
    fmt.Fprint(w, "访问成功")
-   }
 }
 
 func TestDecoratorFuncHandler(w http.ResponseWriter, r *http.Request) {
