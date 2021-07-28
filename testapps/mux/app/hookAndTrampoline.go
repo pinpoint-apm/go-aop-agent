@@ -42,25 +42,25 @@ func init() {
 
 ////////////////////////app.TestUserFunc//////////////////////
 //go:noinline
-func hook_testuserfunc_trampoline(ctx context.Context, num1 int, num2 int) int{
+func hook_testuserfunc_trampoline(ctx context.Context, num1 int, num2 int) int {
 	return 0
 }
 
 //go:noinline
-func hook_testuserfunc(ctx context.Context, num1 int, num2 int) int{
-	funcName :=get_func_name(TestUserFunc)
-	if parentId, err :=common.GetParentId(ctx); err !=nil {
+func hook_testuserfunc(ctx context.Context, num1 int, num2 int) int {
+	funcName := get_func_name(TestUserFunc)
+	if parentId, err := common.GetParentId(ctx); err != nil {
 		common.Logf("parentId is not traceId type. Dropped")
 		return hook_testuserfunc_trampoline(ctx, num1, num2)
-	}else {
-		subTraceId := common.Pinpoint_start_trace(parentId) 
+	} else {
+		subTraceId := common.Pinpoint_start_trace(parentId)
 		defer common.Pinpoint_end_trace(subTraceId)
 
 		newCtx := onBefore(ctx, subTraceId, funcName, num1, num2)
 		response := hook_testuserfunc_trampoline(newCtx, num1, num2)
 		onEnd(subTraceId, response)
 		return response
-		}
+	}
 }
 
 ////////////////////////app.TestComFunc//////////////////////
@@ -119,22 +119,22 @@ func hook_testhighfunc_trampoline(ctx context.Context, a, b int, T func(context.
 func hook_testhighfunc(ctx context.Context, a, b int, T func(context.Context, int, int) int) int {
 	funcName := get_func_name(TestHighFunc)
 	if parentId, err := common.GetParentId(ctx); err != nil {
-			common.Logf("parentId is not traceId type. Dropped")
-			return hook_testhighfunc_trampoline(ctx, a, b, T)
+		common.Logf("parentId is not traceId type. Dropped")
+		return hook_testhighfunc_trampoline(ctx, a, b, T)
 	} else {
-			subTraceId := common.Pinpoint_start_trace(parentId)
-			defer common.Pinpoint_end_trace(subTraceId)
+		subTraceId := common.Pinpoint_start_trace(parentId)
+		defer common.Pinpoint_end_trace(subTraceId)
 
-			newCtx := onBefore(ctx, subTraceId, funcName, a, b, T)
-			response := hook_testhighfunc_trampoline(newCtx, a, b, T)
-			onEnd(subTraceId, response)
-			return response
+		newCtx := onBefore(ctx, subTraceId, funcName, a, b, T)
+		response := hook_testhighfunc_trampoline(newCtx, a, b, T)
+		onEnd(subTraceId, response)
+		return response
 	}
 }
 
 ////////////////////////app.TestAddFunc//////////////////////
 //go:noinline
-func hook_testaddfunc_trampoline(ctx context.Context, a, b int ) int {
+func hook_testaddfunc_trampoline(ctx context.Context, a, b int) int {
 	return 0
 }
 
@@ -142,22 +142,22 @@ func hook_testaddfunc_trampoline(ctx context.Context, a, b int ) int {
 func hook_testaddfunc(ctx context.Context, a, b int) int {
 	funcName := get_func_name(Add)
 	if parentId, err := common.GetParentId(ctx); err != nil {
-			common.Logf("parentId is not traceId type. Dropped")
-			return hook_testaddfunc_trampoline(ctx, a, b)
+		common.Logf("parentId is not traceId type. Dropped")
+		return hook_testaddfunc_trampoline(ctx, a, b)
 	} else {
-			subTraceId := common.Pinpoint_start_trace(parentId)
-			defer common.Pinpoint_end_trace(subTraceId)
+		subTraceId := common.Pinpoint_start_trace(parentId)
+		defer common.Pinpoint_end_trace(subTraceId)
 
-			newCtx := onBefore(ctx, subTraceId, funcName, a, b)
-			response := hook_testaddfunc_trampoline(newCtx, a, b)
-			onEnd(subTraceId, response)
-			return response
+		newCtx := onBefore(ctx, subTraceId, funcName, a, b)
+		response := hook_testaddfunc_trampoline(newCtx, a, b)
+		onEnd(subTraceId, response)
+		return response
 	}
 }
 
 ////////////////////////app.TestMulFunc//////////////////////
 //go:noinline
-func hook_testmulfunc_trampoline(ctx context.Context, a, b int ) int {
+func hook_testmulfunc_trampoline(ctx context.Context, a, b int) int {
 	return 0
 }
 
@@ -165,91 +165,91 @@ func hook_testmulfunc_trampoline(ctx context.Context, a, b int ) int {
 func hook_testmulfunc(ctx context.Context, a, b int) int {
 	funcName := get_func_name(Mul)
 	if parentId, err := common.GetParentId(ctx); err != nil {
-			common.Logf("parentId is not traceId type. Dropped")
-			return hook_testmulfunc_trampoline(ctx, a, b)
+		common.Logf("parentId is not traceId type. Dropped")
+		return hook_testmulfunc_trampoline(ctx, a, b)
 	} else {
-			subTraceId := common.Pinpoint_start_trace(parentId)
-			defer common.Pinpoint_end_trace(subTraceId)
+		subTraceId := common.Pinpoint_start_trace(parentId)
+		defer common.Pinpoint_end_trace(subTraceId)
 
-			newCtx := onBefore(ctx, subTraceId, funcName, a, b)
-			response := hook_testmulfunc_trampoline(newCtx, a, b)
-			onEnd(subTraceId, response)
-			return response
+		newCtx := onBefore(ctx, subTraceId, funcName, a, b)
+		response := hook_testmulfunc_trampoline(newCtx, a, b)
+		onEnd(subTraceId, response)
+		return response
 	}
 }
 
 ////////////////////////app.TestInheritFunc//////////////////////
 //go:noinline
-func hook_testinheritfunc_trampoline(p Person, ctx context.Context) (string, string, int){
-    return "Hello", "World", 0
+func hook_testinheritfunc_trampoline(p Person, ctx context.Context) (string, string, int) {
+	return "Hello", "World", 0
 }
 
 //go:noinline
-func hook_testinheritfunc(p Person, ctx context.Context) (string, string, int){
-    funcName :=get_func_name(Person.TestInheritFunc)
-    if parentId, err :=common.GetParentId(ctx); err !=nil {
-	         common.Logf("parentId is not traceId type. Dropped")
-	         return hook_testinheritfunc_trampoline(p, ctx)
-    } else {
-	        subTraceId := common.Pinpoint_start_trace(parentId) 
-	        defer common.Pinpoint_end_trace(subTraceId)
+func hook_testinheritfunc(p Person, ctx context.Context) (string, string, int) {
+	funcName := get_func_name(Person.TestInheritFunc)
+	if parentId, err := common.GetParentId(ctx); err != nil {
+		common.Logf("parentId is not traceId type. Dropped")
+		return hook_testinheritfunc_trampoline(p, ctx)
+	} else {
+		subTraceId := common.Pinpoint_start_trace(parentId)
+		defer common.Pinpoint_end_trace(subTraceId)
 
-	        newCtx := onBefore(ctx, subTraceId, funcName, p)
-	        response, response0, response1:= hook_testinheritfunc_trampoline(p, newCtx)
-	        onEnd(subTraceId, response, response0, response1)
-	        return response, response0, response1
+		newCtx := onBefore(ctx, subTraceId, funcName, p)
+		response, response0, response1 := hook_testinheritfunc_trampoline(p, newCtx)
+		onEnd(subTraceId, response, response0, response1)
+		return response, response0, response1
 	}
 }
 
 ////////////////////////app.TestLambdaFunc//////////////////////
 //go:noinline
 func hook_testlambdafunc_trampoline(ctx context.Context) int {
-    return 0
+	return 0
 }
 
 //go:noinline
-func hook_testlambdafunc(ctx context.Context) int{
-    funcName := get_func_name(TestLambdaFunc)
-    if parentId, err := common.GetParentId(ctx); err != nil {
-		     common.Logf("parentId is not traceId type. Dropped")
-		     return hook_testlambdafunc_trampoline(ctx)
-    } else {
-		     subTraceId := common.Pinpoint_start_trace(parentId)
-		     defer common.Pinpoint_end_trace(subTraceId)
+func hook_testlambdafunc(ctx context.Context) int {
+	funcName := get_func_name(TestLambdaFunc)
+	if parentId, err := common.GetParentId(ctx); err != nil {
+		common.Logf("parentId is not traceId type. Dropped")
+		return hook_testlambdafunc_trampoline(ctx)
+	} else {
+		subTraceId := common.Pinpoint_start_trace(parentId)
+		defer common.Pinpoint_end_trace(subTraceId)
 
-		     newCtx := onBefore(ctx, subTraceId, funcName)
-		     response := hook_testlambdafunc_trampoline(newCtx)
-		     onEnd(subTraceId, response)
-		     return response
-    }
+		newCtx := onBefore(ctx, subTraceId, funcName)
+		response := hook_testlambdafunc_trampoline(newCtx)
+		onEnd(subTraceId, response)
+		return response
+	}
 }
 
 ////////////////////////app.TestDecoratorFunc//////////////////////
 //go:noinline
 func hook_testdecoratorfunc_trampoline(D Dinner, ctx context.Context) (string, string, string, string, string) {
-    return "A","B","C","D","E"
+	return "A", "B", "C", "D", "E"
 }
 
 //go:noinline
 func hook_testdecoratorfunc(D Dinner, ctx context.Context) (string, string, string, string, string) {
-    funcName := get_func_name(Dinner.TestDecoratorFunc)
-    if parentId, err := common.GetParentId(ctx); err != nil {
-		     common.Logf("parentId is not traceId type. Dropped")
-		     return hook_testdecoratorfunc_trampoline(D, ctx)
-    } else {
-		     subTraceId := common.Pinpoint_start_trace(parentId)
-		     defer common.Pinpoint_end_trace(subTraceId)
+	funcName := get_func_name(Dinner.TestDecoratorFunc)
+	if parentId, err := common.GetParentId(ctx); err != nil {
+		common.Logf("parentId is not traceId type. Dropped")
+		return hook_testdecoratorfunc_trampoline(D, ctx)
+	} else {
+		subTraceId := common.Pinpoint_start_trace(parentId)
+		defer common.Pinpoint_end_trace(subTraceId)
 
-		     newCtx := onBefore(ctx, subTraceId, funcName)
-		     response, response0, response1,response2,response3 := hook_testdecoratorfunc_trampoline(D, newCtx)
-		     onEnd(subTraceId, response, response1,response2,response3)
-		     return response, response0, response1,response2,response3
-    }
+		newCtx := onBefore(ctx, subTraceId, funcName)
+		response, response0, response1, response2, response3 := hook_testdecoratorfunc_trampoline(D, newCtx)
+		onEnd(subTraceId, response, response1, response2, response3)
+		return response, response0, response1, response2, response3
+	}
 }
 
 ////////////////////////app.TestWashFunc//////////////////////
 //go:noinline
-func hook_testwashricefunc_trampoline(R Rice, ctx context.Context) string{
+func hook_testwashricefunc_trampoline(R Rice, ctx context.Context) string {
 	return ""
 }
 
@@ -257,22 +257,22 @@ func hook_testwashricefunc_trampoline(R Rice, ctx context.Context) string{
 func hook_testwashricefunc(R Rice, ctx context.Context) string {
 	funcName := get_func_name(Rice.WashRice)
 	if parentId, err := common.GetParentId(ctx); err != nil {
-			common.Logf("parentId is not traceId type. Dropped")
-			return hook_testwashricefunc_trampoline(R, ctx)
+		common.Logf("parentId is not traceId type. Dropped")
+		return hook_testwashricefunc_trampoline(R, ctx)
 	} else {
-			subTraceId := common.Pinpoint_start_trace(parentId)
-			defer common.Pinpoint_end_trace(subTraceId)
+		subTraceId := common.Pinpoint_start_trace(parentId)
+		defer common.Pinpoint_end_trace(subTraceId)
 
-			newCtx := onBefore(ctx, subTraceId, funcName, R)
-			response := hook_testwashricefunc_trampoline(R, newCtx)
-			onEnd(subTraceId, response)
-			return response
+		newCtx := onBefore(ctx, subTraceId, funcName, R)
+		response := hook_testwashricefunc_trampoline(R, newCtx)
+		onEnd(subTraceId, response)
+		return response
 	}
 }
 
 ////////////////////////app.TestWaterFunc//////////////////////
 //go:noinline
-func hook_testaddwaterfunc_trampoline(W Water, ctx context.Context) string{
+func hook_testaddwaterfunc_trampoline(W Water, ctx context.Context) string {
 	return ""
 }
 
@@ -280,63 +280,63 @@ func hook_testaddwaterfunc_trampoline(W Water, ctx context.Context) string{
 func hook_testaddwaterfunc(W Water, ctx context.Context) string {
 	funcName := get_func_name(Water.AddWater)
 	if parentId, err := common.GetParentId(ctx); err != nil {
-			common.Logf("parentId is not traceId type. Dropped")
-			return hook_testaddwaterfunc_trampoline(W, ctx)
+		common.Logf("parentId is not traceId type. Dropped")
+		return hook_testaddwaterfunc_trampoline(W, ctx)
 	} else {
-			subTraceId := common.Pinpoint_start_trace(parentId)
-			defer common.Pinpoint_end_trace(subTraceId)
+		subTraceId := common.Pinpoint_start_trace(parentId)
+		defer common.Pinpoint_end_trace(subTraceId)
 
-			newCtx := onBefore(ctx, subTraceId, funcName, W)
-			response := hook_testaddwaterfunc_trampoline(W, newCtx)
-			onEnd(subTraceId, response)
-			return response
+		newCtx := onBefore(ctx, subTraceId, funcName, W)
+		response := hook_testaddwaterfunc_trampoline(W, newCtx)
+		onEnd(subTraceId, response)
+		return response
 	}
 }
 
 ////////////////////////app.TestInheritFunc//////////////////////
 //go:noinline
-func hook_testabstractfunc_trampoline(b Book, ctx context.Context) string{
-    return "the book color is RED"
+func hook_testabstractfunc_trampoline(b Book, ctx context.Context) string {
+	return "the book color is RED"
 }
 
 //go:noinline
-func hook_testabstractfunc(b Book, ctx context.Context) string{
-    funcName :=get_func_name(Book.TestAbstractFunc)
-    if parentId, err :=common.GetParentId(ctx); err !=nil {
-	         common.Logf("parentId is not traceId type. Dropped")
-	         return hook_testabstractfunc_trampoline(b, ctx)
-    } else {
-	         subTraceId := common.Pinpoint_start_trace(parentId) 
-	         defer common.Pinpoint_end_trace(subTraceId)
+func hook_testabstractfunc(b Book, ctx context.Context) string {
+	funcName := get_func_name(Book.TestAbstractFunc)
+	if parentId, err := common.GetParentId(ctx); err != nil {
+		common.Logf("parentId is not traceId type. Dropped")
+		return hook_testabstractfunc_trampoline(b, ctx)
+	} else {
+		subTraceId := common.Pinpoint_start_trace(parentId)
+		defer common.Pinpoint_end_trace(subTraceId)
 
-	         newCtx := onBefore(ctx, subTraceId, funcName, b)
-	         response := hook_testabstractfunc_trampoline(b, newCtx)
-	         onEnd(subTraceId, response)
-	         return response
+		newCtx := onBefore(ctx, subTraceId, funcName, b)
+		response := hook_testabstractfunc_trampoline(b, newCtx)
+		onEnd(subTraceId, response)
+		return response
 	}
 }
 
 ////////////////////////app.TestGeneratorFunc//////////////////////
 //go:noinline
-func hook_testgeneratorfunc_trampoline(ctx context.Context, c chan int) (int, int, int, int ){
-    return 1,2,3,4
+func hook_testgeneratorfunc_trampoline(ctx context.Context, c chan int) chan int {
+	return nil
 }
 
 //go:noinline
-func hook_testgeneratorfunc(ctx context.Context, c chan int) (int, int, int, int){
-    funcName := get_func_name(TestGeneratorFunc)
-    if parentId, err := common.GetParentId(ctx); err != nil {
-		     common.Logf("parentId is not traceId type. Dropped")
-		     return hook_testgeneratorfunc_trampoline(ctx, c)
-    } else {
-		     subTraceId := common.Pinpoint_start_trace(parentId)
-		     defer common.Pinpoint_end_trace(subTraceId)
+func hook_testgeneratorfunc(ctx context.Context, c chan int) chan int {
+	funcName := get_func_name(TestGeneratorFunc)
+	if parentId, err := common.GetParentId(ctx); err != nil {
+		common.Logf("parentId is not traceId type. Dropped")
+		return hook_testgeneratorfunc_trampoline(ctx, c)
+	} else {
+		subTraceId := common.Pinpoint_start_trace(parentId)
+		defer common.Pinpoint_end_trace(subTraceId)
 
-		     newCtx := onBefore(ctx, subTraceId, funcName, c)
-		     response, response0, response1, response2:= hook_testgeneratorfunc_trampoline(newCtx, c)
-		     onEnd(subTraceId, response, response0, response1, response2)
-		    return response, response0, response1, response2
-    }
+		newCtx := onBefore(ctx, subTraceId, funcName, c)
+		ch := hook_testgeneratorfunc_trampoline(newCtx, c)
+		onEnd(subTraceId, ch)
+		return ch
+	}
 }
 
 ////////////////////////app.TestException//////////////////////
