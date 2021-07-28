@@ -1,5 +1,13 @@
 ## Getting Started
 
+### Requirement
+
+Dependency|Version| More
+---|----|----
+GO | go1.13+ | 
+cpu arch | amd64(x86_64)|
+*nux| | 
+
 ### Pre-requirement
 
 - [ ] Collector-Agent is online ( [How to?](https://github.com/pinpoint-apm/pinpoint-c-agent/tree/master/DOC/collector-agent#install-collector-agent)).
