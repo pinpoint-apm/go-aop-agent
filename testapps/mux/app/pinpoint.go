@@ -66,13 +66,13 @@ func onException(id common.TraceIdType, err *error) {
 }
 
 func hook_common_func(f interface{}, hook_f interface{}, hook_f_trampoline interface{}) {
-	// funcName := get_func_name(f)
-	// common.Logf("try to hook " + funcName)
+	funcName := get_func_name(f)
+	common.Logf("try to hook " + funcName)
 	if err := aop.AddHook(f, hook_f, hook_f_trampoline); err != nil {
-		// common.Logf("Hook "+funcName+" failed:%s", err)
+		common.Logf("Hook "+funcName+" failed:%s", err)
 		return
 	}
-	// common.Logf(funcName + " is hooked")
+	common.Logf(funcName + " is hooked")
 }
 
 func get_func_name(i interface{}) string {
