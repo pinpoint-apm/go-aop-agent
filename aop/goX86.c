@@ -8,15 +8,7 @@ typedef uint8_t bool;
 #define false ((uint8_t)0)
 #endif
 // typedef [14]uint16_t Prefixes;
-typedef uint8_t Reg;
 
-typedef struct {
-	Reg Segment ;
-	Reg Base ;
-	uint8_t Scale ;
-	Reg Index ;
-	int64_t Disp ; 
-}Mem;
 
 Prefix PrefixImplicit  = 0x8000; // prefix is implied by instruction text
 Prefix PrefixIgnored   = 0x4000; // prefix is ignored: either irrelevant or overridden by a later prefix
@@ -70,7 +62,15 @@ uint16_t toLittleEndianU16(const uint8_t* x) {
 	return (x[1] << 8) | x[0];
 }
 
-bool IsREX( uint8_t prefix ){
+uint32_t toLittleEndianU32(const uint8_t* x) {
+	return x[3]<<24 | x[2]<<16 | (x[1] << 8) | x[0];
+}
+
+uint64_t toLittleEndianU64(const uint8_t* x) {
+	return x[7]<< 56 |x[6]<<48| x[5]<<40 | x[4]<<32 |x[3]<<24 | x[2]<<16 | (x[1] << 8) | x[0];
+}
+
+bool IsREX( Prefix prefix ){
 	return (prefix & 0xF0 ) == PrefixREX ? true : false ;
 }
 
@@ -98,7 +98,7 @@ Inst truncated(const Reg* b,int len,int mode )
 }
 
 Reg prefixToSegment(Prefix  p ) {
-	switch (p &^ PrefixImplicit ){
+	switch (p & ~PrefixImplicit ){
 	case PrefixCS:
 		return CS;
 	case PrefixDS:
@@ -149,7 +149,7 @@ Inst instPrefix(Reg b,int mode )
 
 
 
-unsigned int decode(Reg *src,int len, Inst *ld, int mode)
+unsigned int decode(Reg *src,int len, Inst *ld, int mode,bool gnuCompat)
 {
 	if(src == NULL || ld == NULL){
 		return -1;
@@ -428,7 +428,8 @@ ReadPrefixes:
 
 			haveModrm = true;
 			if (pos >= len) {
-				return truncated(src,len, mode);
+				*ld = truncated(src, len,mode);
+				return 0;
 			}
 
 			modrm = src[pos];
@@ -455,8 +456,9 @@ ReadPrefixes:
 
 					// Consume disp16 if present.
 					if (mod == 0 && rm == 6 || mod == 2 ){
-						if(pos+2 > len(src) ){
-							return truncated(src, len,mode);
+						if(pos+2 > len ){
+							*ld = truncated(src, len,mode);
+							return 0;
 						}
 						mem.Disp = toLittleEndianU16(&src[pos]);
 						pos += 2;
@@ -464,8 +466,9 @@ ReadPrefixes:
 
 					// Consume disp8 if present.
 					if (mod == 1 ){
-						if (pos >= len(src) ){
-							return truncated(src,len, mode);
+						if (pos >= len ){
+							*ld = truncated(src, len,mode);
+							return 0;
 						}
 						mem.Disp = src[pos];
 						pos++;
@@ -479,12 +482,13 @@ ReadPrefixes:
 				if (rm == 4 && mod != 3) {
 					haveSIB = true;
 					if(  pos >= len) {
-						return truncated(src,len, mode);
+						*ld = truncated(src, len,mode);
+						return 0;
 					}
 					sib = src[pos];
 					pos++;
 					if (opshift >= 0 ){
-						inst.Opcode |= (uint32_t)sib << (uint)opshift;
+						inst.Opcode |= (uint32_t)sib << (uint32_t)opshift;
 						opshift -= 8;
 					}
 					scale = sib >> 6;
@@ -499,7 +503,7 @@ ReadPrefixes:
 						index |= 8;
 					}
 
-					mem.Scale = 1 << (uint)(scale);
+					mem.Scale = 1 << (scale);
 					if (index == 4) {
 						// no mem.Index
 					} else {
@@ -518,26 +522,28 @@ ReadPrefixes:
 					}
 					if (mod == 0 && rm&7 == 5 || rm&7 == 4 ){
 						// base omitted
-					} else if mod != 3 {
-						mem.Base = baseRegForBits(addrMode) + Reg(rm);
+					} else if (mod != 3) {
+						mem.Base = baseRegForBits(addrMode) + (Reg)(rm);
 					}
 				}
 
 				// Consume disp32 if present.
 				if ( mod == 0 && (rm&7 == 5 || haveSIB && base&7 == 5) || mod == 2 ){
 					if (pos+4 > len ){
-						return truncated(src,len, mode);
+						*ld = truncated(src, len,mode);
+						return 0;
 					}
 					dispoff = pos;
 					displen = 4;
-					mem.Disp = int64(binary.LittleEndian.Uint32(src[pos:]))
-					pos += 4
+					mem.Disp = toLittleEndianU32(&src[pos]);
+					pos += 4;
 				}
 
 				// Consume disp8 if present.
-				if mod == 1 {
-					if pos >= len(src) {
-						return truncated(src, mode);
+				if( mod == 1 ){
+					if (pos >= len ){
+						*ld = truncated(src, len,mode);
+						return 0;
 					}
 					dispoff = pos;
 					displen = 1;
@@ -548,7 +554,7 @@ ReadPrefixes:
 				// In 64-bit, mod=0 rm=5 is PC-relative instead of just disp.
 				// See Vol 2A. Table 2-7.
 				if( mode == 64 && mod == 0 && rm&7 == 5 ){
-					if addrMode == 32 {
+					if (addrMode == 32) {
 						mem.Base = EIP;
 					} else {
 						mem.Base = RIP;
@@ -571,10 +577,10 @@ ReadPrefixes:
 
 		case xFail:
 			inst.Op = 0;
-			goto Decode;
+			goto BREAK_DECODE;
 
 		case xMatch:
-			goto Decode;
+			goto BREAK_DECODE;
 
 		case xJump:
 			pc = decoder[pc];
@@ -598,10 +604,10 @@ ReadPrefixes:
 					pc = xpc;
 					pos++;
 					if (opshift >= 0 ){
-						inst.Opcode |= (uint32_t)(b) << (uint)(opshift);
+						inst.Opcode |= (uint32_t)(b) << (opshift);
 						opshift -= 8;
 					}
-					continue Decode ;
+					goto CONTINUE_DECODE;
 				}
 			}
 			// xCondByte is the only conditional with a fall through,
@@ -609,67 +615,71 @@ ReadPrefixes:
 			// an xCondSlash. If the fallthrough instruction is xFail,
 			// advance the position so that the decoded instruction
 			// size includes the byte we just compared against.
-			if decodeOp(decoder[pc]) == xJump {
-				pc = int(decoder[pc+1])
+			if ((decodeOp)(decoder[pc]) == xJump ){
+				pc = decoder[pc+1];
 			}
-			if decodeOp(decoder[pc]) == xFail {
-				pos++
+			if ( (decodeOp)(decoder[pc]) == xFail ){
+				pos++;
 			}
-
+			break;
 		case xCondIs64:
-			if mode == 64 {
-				pc = int(decoder[pc+1])
+			if (mode == 64) {
+				pc = (decoder[pc+1]);
 			} else {
-				pc = int(decoder[pc])
+				pc = (decoder[pc]);
 			}
-
+			break;
 		case xCondIsMem:
-			mem := haveMem
-			if !haveModrm {
-				if pos >= len(src) {
-					return instPrefix(src[0], mode) // too long
+			bool mem = haveMem;
+			if (!haveModrm) {
+				if (pos >= len) {
+					*ld = instPrefix(src[0], mode); // too long
+					return 0;
 				}
-				mem = src[pos]>>6 != 3
+				mem = src[pos]>>6 != 3;
 			}
-			if mem {
-				pc = int(decoder[pc+1])
+			if (mem) {
+				pc = (decoder[pc+1]);
 			} else {
-				pc = int(decoder[pc])
+				pc = (decoder[pc]);
 			}
-
+			break;
 		case xCondDataSize:
-			switch dataMode {
+			switch (dataMode) {
 			case 16:
-				if dataSizeIndex >= 0 {
-					inst.Prefix[dataSizeIndex] |= PrefixImplicit
+				if (dataSizeIndex >= 0) {
+					inst.Prefix[dataSizeIndex] |= PrefixImplicit;
 				}
-				pc = int(decoder[pc])
+				pc = (decoder[pc]);
 			case 32:
-				if dataSizeIndex >= 0 {
-					inst.Prefix[dataSizeIndex] |= PrefixImplicit
+				if ( dataSizeIndex >= 0 ){
+					inst.Prefix[dataSizeIndex] |= PrefixImplicit;
 				}
-				pc = int(decoder[pc+1])
+				pc = (decoder[pc+1]);
 			case 64:
-				rexUsed |= PrefixREXW
-				pc = int(decoder[pc+2])
+				rexUsed |= PrefixREXW;
+				pc = (decoder[pc+2]);
 			}
 
 		case xCondAddrSize:
-			switch addrMode {
+			switch (addrMode) {
 			case 16:
-				if addrSizeIndex >= 0 {
-					inst.Prefix[addrSizeIndex] |= PrefixImplicit
+				if (addrSizeIndex >= 0) {
+					inst.Prefix[addrSizeIndex] |= PrefixImplicit;
 				}
-				pc = int(decoder[pc])
+				pc = (decoder[pc]);
+				break;
 			case 32:
-				if addrSizeIndex >= 0 {
-					inst.Prefix[addrSizeIndex] |= PrefixImplicit
+				if (addrSizeIndex >= 0) {
+					inst.Prefix[addrSizeIndex] |= PrefixImplicit;
 				}
-				pc = int(decoder[pc+1])
+				pc = (decoder[pc+1]);
+				break;
 			case 64:
-				pc = int(decoder[pc+2])
+				pc = (decoder[pc+2]);
+				break;
 			}
-
+			break;
 		case xCondPrefix:
 			// Conditional branch based on presence or absence of prefixes.
 			// The conflict cases here are completely undocumented and
@@ -740,93 +750,114 @@ ReadPrefixes:
 			// In 64-bit mode REX.W is another valid prefix to test for, but
 			// there is less ambiguity about that. When present, REX.W is
 			// always the first entry in the table.
-			n := int(decoder[pc])
-			pc++
-			sawF3 := false
-			for j := 0; j < n; j++ {
-				prefix := Prefix(decoder[pc+2*j])
-				if prefix.IsREX() {
-					rexUsed |= prefix
-					if rex&prefix == prefix {
-						pc = int(decoder[pc+2*j+1])
-						continue Decode
+			uint16 n = decoder[pc];
+			pc++;
+			bool sawF3 = false;
+			int j = 0;
+			for (; j < n; j++ ){
+				Prefix prefix = (decoder[pc+2*j]);
+
+				if (IsREX(prefix)) {
+					rexUsed |= prefix;
+					if (rex&prefix == prefix) {
+						pc = decoder[pc+2*j+1];
+						// continue Decode
+						goto CONTINUE_DECODE;
 					}
-					continue
+					continue;
 				}
-				ok := false
-				if prefix == 0 {
-					ok = true
-				} else if prefix.IsREX() {
-					rexUsed |= prefix
-					if rex&prefix == prefix {
-						ok = true
+
+				bool ok = false;
+				if (prefix == 0) {
+					ok = true;
+				} else if (IsREX(prefix)) {
+					rexUsed |= prefix;
+					if (rex&prefix == prefix) {
+						ok = true;
 					}
-				} else if prefix == 0xC5 || prefix == 0xC4 {
-					if vex == prefix {
-						ok = true
+				} else if (prefix == 0xC5 || prefix == 0xC4 ){
+					if (vex == prefix ){
+						ok = true;
 					}
-				} else if vex != 0 && (prefix == 0x0F || prefix == 0x0F38 || prefix == 0x0F3A ||
-					prefix == 0x66 || prefix == 0xF2 || prefix == 0xF3) {
-					var vexM, vexP Prefix
-					if vex == 0xC5 {
-						vexM = 1 // 2 byte vex always implies 0F
-						vexP = inst.Prefix[vexIndex+1]
+				} else if (vex != 0 && (prefix == 0x0F || prefix == 0x0F38 || prefix == 0x0F3A ||
+					prefix == 0x66 || prefix == 0xF2 || prefix == 0xF3) ){
+					Prefix vexM, vexP ;
+					if (vex == 0xC5 ){
+						vexM = 1 ;// 2 byte vex always implies 0F
+						vexP = inst.Prefix[vexIndex+1];
 					} else {
-						vexM = inst.Prefix[vexIndex+1]
-						vexP = inst.Prefix[vexIndex+2]
+						vexM = inst.Prefix[vexIndex+1];
+						vexP = inst.Prefix[vexIndex+2];
 					}
-					switch prefix {
+					switch (prefix) {
 					case 0x66:
-						ok = vexP&3 == 1
+						ok = vexP&3 == 1;
+						break;
 					case 0xF3:
-						ok = vexP&3 == 2
+						ok = vexP&3 == 2;
+						break;
 					case 0xF2:
-						ok = vexP&3 == 3
+						ok = vexP&3 == 3;
+						break;
 					case 0x0F:
-						ok = vexM&3 == 1
+						ok = vexM&3 == 1;
+						break;
 					case 0x0F38:
-						ok = vexM&3 == 2
+						ok = vexM&3 == 2;
+						break;
 					case 0x0F3A:
-						ok = vexM&3 == 3
+						ok = vexM&3 == 3;
+						break;
 					}
 				} else {
-					if prefix == 0xF3 {
-						sawF3 = true
+					if (prefix == 0xF3) {
+						sawF3 = true;
 					}
-					switch prefix {
+					switch (prefix) {
 					case PrefixLOCK:
-						if lockIndex >= 0 {
-							inst.Prefix[lockIndex] |= PrefixImplicit
-							ok = true
+						if (lockIndex >= 0) {
+							inst.Prefix[lockIndex] |= PrefixImplicit;
+							ok = true;
 						}
-					case PrefixREP, PrefixREPN:
-						if repIndex >= 0 && inst.Prefix[repIndex]&0xFF == prefix {
-							inst.Prefix[repIndex] |= PrefixImplicit
-							ok = true
+						break;
+					case PrefixREP:
+					case PrefixREPN:
+						if (repIndex >= 0 && inst.Prefix[repIndex]&0xFF == prefix ){
+							inst.Prefix[repIndex] |= PrefixImplicit;
+							ok = true;
 						}
-						if gnuCompat && !ok && prefix == 0xF3 && repIndex >= 0 && (j+1 >= n || decoder[pc+2*(j+1)] != 0xF2) {
+						if ( gnuCompat && !ok && prefix == 0xF3 && repIndex >= 0 && (j+1 >= n || decoder[pc+2*(j+1)] != 0xF2) ){
 							// Check to see if earlier prefix F3 is present.
-							for i := repIndex - 1; i >= 0; i-- {
-								if inst.Prefix[i]&0xFF == prefix {
-									inst.Prefix[i] |= PrefixImplicit
-									ok = true
+							int i = 0;
+							for( i = repIndex - 1; i >= 0; i-- ){
+								if (inst.Prefix[i]&0xFF == prefix ){
+									inst.Prefix[i] |= PrefixImplicit;
+									ok = true;
 								}
 							}
 						}
-						if gnuCompat && !ok && prefix == 0xF2 && repIndex >= 0 && !sawF3 && inst.Prefix[repIndex]&0xFF == 0xF3 {
+						if (gnuCompat && !ok && prefix == 0xF2 && repIndex >= 0 && !sawF3 && inst.Prefix[repIndex]&0xFF == 0xF3 ){
 							// Check to see if earlier prefix F2 is present.
-							for i := repIndex - 1; i >= 0; i-- {
-								if inst.Prefix[i]&0xFF == prefix {
-									inst.Prefix[i] |= PrefixImplicit
-									ok = true
+							int i = 0;
+							for( i = repIndex - 1; i >= 0; i-- ){
+								if( inst.Prefix[i]&0xFF == prefix ){
+									inst.Prefix[i] |= PrefixImplicit;
+									ok = true;
 								}
 							}
 						}
-					case PrefixCS, PrefixDS, PrefixES, PrefixFS, PrefixGS, PrefixSS:
-						if segIndex >= 0 && inst.Prefix[segIndex]&0xFF == prefix {
-							inst.Prefix[segIndex] |= PrefixImplicit
-							ok = true
+						break;
+					case PrefixCS:
+					case PrefixDS:
+					case PrefixES:
+					case PrefixFS:
+					case PrefixGS:
+					case PrefixSS:
+						if (segIndex >= 0 && inst.Prefix[segIndex]&0xFF == prefix ){
+							inst.Prefix[segIndex] |= PrefixImplicit;
+							ok = true;
 						}
+						break;
 					case PrefixDataSize:
 						// Looking for 66 mandatory prefix.
 						// The F2/F3 mandatory prefixes take priority when both are present.
@@ -836,380 +867,443 @@ ReadPrefixes:
 						// Intel xed works this way, treating the F2/F3 as inhibiting the 66.
 						// GNU libopcodes allows the 66 to match. We do what Intel xed does
 						// except in gnuCompat mode.
-						if repIndex >= 0 && !gnuCompat {
-							inst.Op = 0
-							break Decode
+						if (repIndex >= 0 && !gnuCompat ){
+							inst.Op = 0;
+							goto BREAK_DECODE;
 						}
-						if dataSizeIndex >= 0 {
-							inst.Prefix[dataSizeIndex] |= PrefixImplicit
-							ok = true
+						if (dataSizeIndex >= 0 ){
+							inst.Prefix[dataSizeIndex] |= PrefixImplicit;
+							ok = true;
 						}
 					case PrefixAddrSize:
-						if addrSizeIndex >= 0 {
-							inst.Prefix[addrSizeIndex] |= PrefixImplicit
-							ok = true
+						if( addrSizeIndex >= 0 ){
+							inst.Prefix[addrSizeIndex] |= PrefixImplicit;
+							ok = true;
 						}
 					}
 				}
-				if ok {
-					pc = int(decoder[pc+2*j+1])
-					continue Decode
+				if (ok) {
+					pc = (decoder[pc+2*j+1]);
+					goto CONTINUE_DECODE;
 				}
 			}
-			inst.Op = 0
-			break Decode
+			inst.Op = 0;
+			goto BREAK_DECODE;
 
 		case xCondSlashR:
-			pc = int(decoder[pc+regop&7])
-
+			pc = (decoder[pc+regop&7]);
+			break;
 		// Input.
 
 		case xReadSlashR:
 			// done above
-
+			break;
 		case xReadIb:
-			if pos >= len(src) {
-				return truncated(src, mode)
+			if (pos >= len) {
+				*ld = truncated(src, len,mode);
+				return 0;
 			}
-			imm8 = int8(src[pos])
-			pos++
-
+			imm8 = (src[pos]);
+			pos++;
+			break;
 		case xReadIw:
-			if pos+2 > len(src) {
-				return truncated(src, mode)
+			if (pos+2 > len) {
+					*ld = truncated(src, len,mode);
+				return 0;
 			}
-			imm = int64(binary.LittleEndian.Uint16(src[pos:]))
-			pos += 2
-
+			imm = toLittleEndianU16(&src[pos]);
+			pos += 2 ;
+			break;
 		case xReadId:
-			if pos+4 > len(src) {
-				return truncated(src, mode)
+			if (pos+4 > len) {
+					*ld = truncated(src, len,mode);
+				return 0;
 			}
-			imm = int64(binary.LittleEndian.Uint32(src[pos:]))
-			pos += 4
-
+			imm = toLittleEndianU32(&src[pos]);
+			pos += 4;
+			break;
 		case xReadIo:
-			if pos+8 > len(src) {
-				return truncated(src, mode)
+			if (pos+8 > len ){
+					*ld = truncated(src, len,mode);
+				return 0;
 			}
-			imm = int64(binary.LittleEndian.Uint64(src[pos:]))
-			pos += 8
-
+			imm = toLittleEndianU64(&src[pos]);
+			pos += 8;
+			break;
 		case xReadCb:
-			if pos >= len(src) {
-				return truncated(src, mode)
+			if (pos >= len) {
+				*ld = truncated(src, len,mode);
+				return 0;
 			}
-			immcpos = pos
-			immc = int64(src[pos])
-			pos++
-
+			immcpos = pos;
+			immc = src[pos];
+			pos++;
+			break;
 		case xReadCw:
-			if pos+2 > len(src) {
-				return truncated(src, mode)
+			if (pos+2 > len){
+				*ld = truncated(src, len,mode);
+				return 0;
 			}
-			immcpos = pos
-			immc = int64(binary.LittleEndian.Uint16(src[pos:]))
-			pos += 2
-
+			immcpos = pos;
+			immc = toLittleEndianU16(&src[pos]);
+			pos += 2;
+			break;
 		case xReadCm:
-			immcpos = pos
-			if addrMode == 16 {
-				if pos+2 > len(src) {
-					return truncated(src, mode)
+			immcpos = pos;
+			if (addrMode == 16) {
+				if (pos+2 > len ){
+					*ld = truncated(src, len,mode);
+					return 0;
 				}
-				immc = int64(binary.LittleEndian.Uint16(src[pos:]))
-				pos += 2
-			} else if addrMode == 32 {
-				if pos+4 > len(src) {
-					return truncated(src, mode)
+				immc = toLittleEndianU16(&src[pos]);
+				pos += 2;
+			} else if (addrMode == 32) {
+				if (pos+4 > len ){
+					*ld = truncated(src, len,mode);
+					return 0;
 				}
-				immc = int64(binary.LittleEndian.Uint32(src[pos:]))
-				pos += 4
+				immc = toLittleEndianU32(src[pos]);
+				pos += 4;
 			} else {
-				if pos+8 > len(src) {
-					return truncated(src, mode)
+				if (pos+8 > len ){
+					*ld = truncated(src, len,mode);
+					return 0;
 				}
-				immc = int64(binary.LittleEndian.Uint64(src[pos:]))
-				pos += 8
+				immc = toLittleEndianU64(&src[pos]);
+				pos += 8;
 			}
+			break;
 		case xReadCd:
-			immcpos = pos
-			if pos+4 > len(src) {
-				return truncated(src, mode)
+			immcpos = pos;
+			if(pos+4 > len){
+				*ld = truncated(src, len,mode);
+				return 0;
 			}
-			immc = int64(binary.LittleEndian.Uint32(src[pos:]))
-			pos += 4
-
+			immc = toLittleEndianU32(&src[pos]);
+			pos += 4;
+			break;
 		case xReadCp:
-			immcpos = pos
-			if pos+6 > len(src) {
-				return truncated(src, mode)
+			immcpos = pos;
+			if (pos+6 > len) {
+				*ld = truncated(src, len,mode);
+				return 0;
 			}
-			w := binary.LittleEndian.Uint32(src[pos:])
-			w2 := binary.LittleEndian.Uint16(src[pos+4:])
-			immc = int64(w2)<<32 | int64(w)
-			pos += 6
-
+			int64_t w = toLittleEndianU32(&src[pos]);
+			int64_t w2 =toLittleEndianU16(&src[pos+4]);
+			immc = (w2)<<32 | (w);
+			pos += 6;
+			break;
 		// Output.
 
 		case xSetOp:
-			inst.Op = Op(decoder[pc])
-			pc++
-
-		case xArg1,
-			xArg3,
-			xArgAL,
-			xArgAX,
-			xArgCL,
-			xArgCS,
-			xArgDS,
-			xArgDX,
-			xArgEAX,
-			xArgEDX,
-			xArgES,
-			xArgFS,
-			xArgGS,
-			xArgRAX,
-			xArgRDX,
-			xArgSS,
-			xArgST,
-			xArgXMM0:
-			inst.Args[narg] = fixedArg[x]
-			narg++
-
+			inst.Op = (decoder[pc]);
+			pc++;
+			break;
+		case 	xArg1:
+		case	xArg3:
+		case 	xArgAL:
+		case	xArgAX:
+		case	xArgCL:
+		case 	xArgCS:
+		case	xArgDS:
+		case 	xArgDX:
+		case	xArgEAX:
+		case	xArgEDX:
+		case	xArgES:
+		case	xArgFS:
+		case	xArgGS:
+		case	xArgRAX:
+		case	xArgRDX:
+		case	xArgSS:
+		case	xArgST:
+		case	xArgXMM0:
+			inst.Args[narg] = fixedArg[x];
+			narg++;
+			break;
 		case xArgImm8:
-			inst.Args[narg] = Imm(imm8)
-			narg++
-
+			inst.Args[narg] = imm8;
+			narg++;
+			break;
 		case xArgImm8u:
-			inst.Args[narg] = Imm(uint8(imm8))
-			narg++
-
+			inst.Args[narg] = imm8;
+			narg++;
+			break;
 		case xArgImm16:
-			inst.Args[narg] = Imm(int16(imm))
-			narg++
-
+			inst.Args[narg] = imm;
+			narg++;
+			break;
 		case xArgImm16u:
-			inst.Args[narg] = Imm(uint16(imm))
-			narg++
-
+			inst.Args[narg] = imm;
+			narg++;
+			break;
 		case xArgImm32:
-			inst.Args[narg] = Imm(int32(imm))
-			narg++
-
+			inst.Args[narg] = imm;
+			narg++;
+			break;
 		case xArgImm64:
-			inst.Args[narg] = Imm(imm)
-			narg++
-
-		case xArgM,
-			xArgM128,
-			xArgM256,
-			xArgM1428byte,
-			xArgM16,
-			xArgM16and16,
-			xArgM16and32,
-			xArgM16and64,
-			xArgM16colon16,
-			xArgM16colon32,
-			xArgM16colon64,
-			xArgM16int,
-			xArgM2byte,
-			xArgM32,
-			xArgM32and32,
-			xArgM32fp,
-			xArgM32int,
-			xArgM512byte,
-			xArgM64,
-			xArgM64fp,
-			xArgM64int,
-			xArgM8,
-			xArgM80bcd,
-			xArgM80dec,
-			xArgM80fp,
-			xArgM94108byte,
-			xArgMem:
-			if !haveMem {
-				inst.Op = 0
-				break Decode
+			inst.Args[narg] =imm;
+			narg++;
+			break;
+		case xArgM:
+		case xArgM128:
+		case xArgM256:
+		case xArgM1428byte:
+		case xArgM16:
+		case	xArgM16and16:
+		case	xArgM16and32:
+		case	xArgM16and64:
+		case	xArgM16colon16:
+		case	xArgM16colon32:
+		case	xArgM16colon64:
+		case	xArgM16int:
+		case	xArgM2byte:
+		case	xArgM32:
+		case	xArgM32and32:
+		case	xArgM32fp:
+		case	xArgM32int:
+		case	xArgM512byte:
+		case	xArgM64:
+		case	xArgM64fp:
+		case	xArgM64int:
+		case	xArgM8:
+		case	xArgM80bcd:
+		case	xArgM80dec:
+		case	xArgM80fp:
+		case	xArgM94108byte:
+		case	xArgMem:
+			if (!haveMem) {
+				inst.Op = 0;
+				goto BREAK_DECODE;
 			}
-			inst.Args[narg] = mem
-			inst.MemBytes = int(memBytes[decodeOp(x)])
-			if mem.Base == RIP {
-				inst.PCRel = displen
-				inst.PCRelOff = dispoff
+			inst.Args[narg] = mem;
+			inst.MemBytes = memBytes[x];
+			if (mem.Base == RIP) {
+				inst.PCRel = displen;
+				inst.PCRelOff = dispoff;
 			}
-			narg++
-
+			narg++;
+			break;
 		case xArgPtr16colon16:
-			inst.Args[narg] = Imm(immc >> 16)
-			inst.Args[narg+1] = Imm(immc & (1<<16 - 1))
-			narg += 2
-
+			inst.Args[narg] = (immc >> 16);
+			inst.Args[narg+1] = (immc & (1<<16 - 1));
+			narg += 2;
+			break;
 		case xArgPtr16colon32:
-			inst.Args[narg] = Imm(immc >> 32)
-			inst.Args[narg+1] = Imm(immc & (1<<32 - 1))
-			narg += 2
-
-		case xArgMoffs8, xArgMoffs16, xArgMoffs32, xArgMoffs64:
-			// TODO(rsc): Can address be 64 bits?
-			mem = Mem{Disp: int64(immc)}
-			if segIndex >= 0 {
-				mem.Segment = prefixToSegment(inst.Prefix[segIndex])
-				inst.Prefix[segIndex] |= PrefixImplicit
+			inst.Args[narg] = (immc >> 32);
+			inst.Args[narg+1] = (immc & (1<<32 - 1));
+			narg += 2;
+			break;
+		case xArgMoffs8:
+		case xArgMoffs16:
+		case xArgMoffs32:
+		case xArgMoffs64:
+			{	
+				// TODO(rsc): Can address be 64 bits?
+				Mem mem = {.Disp= immc};
+				if (segIndex >= 0 ){
+					mem.Segment = prefixToSegment(inst.Prefix[segIndex]);
+					inst.Prefix[segIndex] |= PrefixImplicit;
+				}
+				inst.Args[narg] = mem;
+				inst.MemBytes = memBytes[x];
+				if (mem.Base == RIP) {
+					inst.PCRel = displen;
+					inst.PCRelOff = dispoff;
+				}
+				narg++;
+				break;
 			}
-			inst.Args[narg] = mem
-			inst.MemBytes = int(memBytes[decodeOp(x)])
-			if mem.Base == RIP {
-				inst.PCRel = displen
-				inst.PCRelOff = dispoff
-			}
-			narg++
-
 		case xArgYmm1:
-			base := baseReg[x]
-			index := Reg(regop)
-			if inst.Prefix[vexIndex+1]&0x80 == 0 {
-				index += 8
+			Reg base = baseReg[x];
+			Reg index = (regop);
+			if (inst.Prefix[vexIndex+1]&0x80 == 0 ){
+				index += 8;
 			}
-			inst.Args[narg] = base + index
-			narg++
-
-		case xArgR8, xArgR16, xArgR32, xArgR64, xArgXmm, xArgXmm1, xArgDR0dashDR7:
-			base := baseReg[x]
-			index := Reg(regop)
-			if rex != 0 && base == AL && index >= 4 {
-				rexUsed |= PrefixREX
-				index -= 4
-				base = SPB
+			inst.Args[narg] = base + index;
+			narg++;
+			break;
+		case xArgR8:
+		case xArgR16:
+		case xArgR32:
+		case xArgR64:
+		case xArgXmm:
+		case xArgXmm1:
+		case xArgDR0dashDR7:
+			Reg base = baseReg[x];
+			Reg index = regop;
+			if (rex != 0 && base == AL && index >= 4 ){
+				rexUsed |= PrefixREX;
+				index -= 4;
+				base = SPB;
 			}
-			inst.Args[narg] = base + index
-			narg++
-
-		case xArgMm, xArgMm1, xArgTR0dashTR7:
-			inst.Args[narg] = baseReg[x] + Reg(regop&7)
-			narg++
-
+			inst.Args[narg] = base + index;
+			narg++;
+			break;
+		case xArgMm:
+		case xArgMm1:
+		case xArgTR0dashTR7:
+			inst.Args[narg] = baseReg[x] + (regop&7);
+			narg++;
+			break;
 		case xArgCR0dashCR7:
 			// AMD documents an extension that the LOCK prefix
 			// can be used in place of a REX prefix in order to access
 			// CR8 from 32-bit mode. The LOCK prefix is allowed in
 			// all modes, provided the corresponding CPUID bit is set.
-			if lockIndex >= 0 {
-				inst.Prefix[lockIndex] |= PrefixImplicit
-				regop += 8
+			if (lockIndex >= 0 ){
+				inst.Prefix[lockIndex] |= PrefixImplicit;
+				regop += 8;
 			}
-			inst.Args[narg] = CR0 + Reg(regop)
-			narg++
-
+			inst.Args[narg] = CR0 + (regop);
+			narg++;
+			break;
 		case xArgSreg:
-			regop &= 7
-			if regop >= 6 {
-				inst.Op = 0
-				break Decode
+			regop &= 7;
+			if (regop >= 6) {
+				inst.Op = 0;
+				goto BREAK_DECODE;
 			}
-			inst.Args[narg] = ES + Reg(regop)
-			narg++
+			inst.Args[narg] = ES + (regop);
+			narg++;
+			break;
 
-		case xArgRmf16, xArgRmf32, xArgRmf64:
-			base := baseReg[x]
-			index := Reg(modrm & 07)
-			if rex&PrefixREXB != 0 {
-				rexUsed |= PrefixREXB
-				index += 8
+		case xArgRmf16:
+		case xArgRmf32:
+		case xArgRmf64:
+			Reg base = baseReg[x];
+			Reg index = modrm & 07;
+			if (rex&PrefixREXB != 0 ){
+				rexUsed |= PrefixREXB;
+				index += 8;
 			}
-			inst.Args[narg] = base + index
-			narg++
-
-		case xArgR8op, xArgR16op, xArgR32op, xArgR64op, xArgSTi:
-			n := inst.Opcode >> uint(opshift+8) & 07
-			base := baseReg[x]
-			index := Reg(n)
-			if rex&PrefixREXB != 0 && decodeOp(x) != xArgSTi {
-				rexUsed |= PrefixREXB
-				index += 8
+			inst.Args[narg] = base + index;
+			narg++;
+			break;
+		case xArgR8op:
+		case xArgR16op:
+		case xArgR32op:
+		case xArgR64op:
+		case xArgSTi:
+			Reg n = inst.Opcode >> uint(opshift+8) & 07;
+			Reg base = baseReg[x];
+			Reg index = n;
+			if (rex&PrefixREXB != 0 && x != xArgSTi ){
+				rexUsed |= PrefixREXB;
+				index += 8;
 			}
-			if rex != 0 && base == AL && index >= 4 {
-				rexUsed |= PrefixREX
-				index -= 4
-				base = SPB
+			if (rex != 0 && base == AL && index >= 4 ){
+				rexUsed |= PrefixREX;
+				index -= 4;
+				base = SPB;
 			}
-			inst.Args[narg] = base + index
-			narg++
-		case xArgRM8, xArgRM16, xArgRM32, xArgRM64, xArgR32M16, xArgR32M8, xArgR64M16,
-			xArgMmM32, xArgMmM64, xArgMm2M64,
-			xArgXmm2M16, xArgXmm2M32, xArgXmm2M64, xArgXmmM64, xArgXmmM128, xArgXmmM32, xArgXmm2M128,
-			xArgYmm2M256:
-			if haveMem {
-				inst.Args[narg] = mem
-				inst.MemBytes = int(memBytes[decodeOp(x)])
-				if mem.Base == RIP {
-					inst.PCRel = displen
-					inst.PCRelOff = dispoff
+			inst.Args[narg] = base + index;
+			narg++;
+			break;
+		case xArgRM8:
+		case xArgRM16:
+		case xArgRM32:
+		case xArgRM64:
+		case xArgR32M16:
+		case xArgR32M8:
+		case xArgR64M16:
+		case xArgMmM32:
+		case xArgMmM64:
+		case xArgMm2M64:
+		case xArgXmm2M16:
+		case xArgXmm2M32:
+		case xArgXmm2M64:
+		case xArgXmmM64:
+		case xArgXmmM128:
+		case xArgXmmM32: 
+		case  xArgXmm2M128:
+	    case xArgYmm2M256:
+			if (haveMem) {
+				inst.Args[narg] = mem;
+				inst.MemBytes = memBytes[(x)];
+				if (mem.Base == RIP) {
+					inst.PCRel = displen;
+					inst.PCRelOff = dispoff;
 				}
 			} else {
-				base := baseReg[x]
-				index := Reg(rm)
-				switch decodeOp(x) {
-				case xArgMmM32, xArgMmM64, xArgMm2M64:
+				Reg base = baseReg[x];
+				Reg index = rm;
+				switch (x) {
+				case xArgMmM32:
+				case xArgMmM64:
+				case xArgMm2M64:
 					// There are only 8 MMX registers, so these ignore the REX.X bit.
-					index &= 7
+					index &= 7;
+					break;
 				case xArgRM8:
-					if rex != 0 && index >= 4 {
-						rexUsed |= PrefixREX
-						index -= 4
-						base = SPB
+					if (rex != 0 && index >= 4 ){
+						rexUsed |= PrefixREX;
+						index -= 4;
+						base = SPB;
 					}
+					break;
 				case xArgYmm2M256:
-					if vex == 0xC4 && inst.Prefix[vexIndex+1]&0x40 == 0x40 {
-						index += 8
+					if (vex == 0xC4 && inst.Prefix[vexIndex+1]&0x40 == 0x40 ){
+						index += 8;
 					}
+					break;
 				}
-				inst.Args[narg] = base + index
+				inst.Args[narg] = base + index;
 			}
-			narg++
-
+			narg++;
+			break;
 		case xArgMm2: // register only; TODO(rsc): Handle with tag modrm_regonly tag
-			if haveMem {
-				inst.Op = 0
-				break Decode
+			if (haveMem) {
+				inst.Op = 0;
+				goto BREAK_DECODE;
 			}
-			inst.Args[narg] = baseReg[x] + Reg(rm&7)
-			narg++
-
+			inst.Args[narg] = baseReg[x] + (rm&7);
+			narg++;
+			break;
 		case xArgXmm2: // register only; TODO(rsc): Handle with tag modrm_regonly tag
-			if haveMem {
-				inst.Op = 0
-				break Decode
+			if (haveMem) {
+				inst.Op = 0;
+				goto BREAK_DECODE;
 			}
-			inst.Args[narg] = baseReg[x] + Reg(rm)
-			narg++
-
+			inst.Args[narg] = baseReg[x] + (rm);
+			narg++;
+			break;
 		case xArgRel8:
-			inst.PCRelOff = immcpos
-			inst.PCRel = 1
-			inst.Args[narg] = Rel(int8(immc))
-			narg++
-
+			inst.PCRelOff = immcpos;
+			inst.PCRel = 1;
+			inst.Args[narg] = (Rel)(immc);
+			narg++;
+			break;
 		case xArgRel16:
-			inst.PCRelOff = immcpos
-			inst.PCRel = 2
-			inst.Args[narg] = Rel(int16(immc))
-			narg++
-
+			inst.PCRelOff = immcpos;
+			inst.PCRel = 2;
+			inst.Args[narg] = (Rel)(immc);
+			narg++;
+			break;
 		case xArgRel32:
-			inst.PCRelOff = immcpos
-			inst.PCRel = 4
-			inst.Args[narg] = Rel(int32(immc))
-			narg++
+			inst.PCRelOff = immcpos;
+			inst.PCRel = 4;
+			inst.Args[narg] = (Rel)(immc);
+			narg++;
+			break;
 		}
+
+CONTINUE_DECODE:
+		// continue;
 	}
-Decode:
-	if inst.Op == 0 {
+
+BREAK_DECODE:
+
+	if (inst.Op == 0) {
 		// Invalid instruction.
-		if nprefix > 0 {
-			return instPrefix(src[0], mode) // invalid instruction
+		if (nprefix > 0) {
+			//todo invalid instruction
+			*ld = instPrefix(src[0], mode); // invalid instruction
+			return -1;
 		}
-		return Inst{Len: pos}, ErrUnrecognized
+		Inst inst = {.Len= pos};
+		*ld = inst;
+		//todo ErrUnrecognized
+		return -1; //ErrUnrecognized
 	}
 
 	// Matched! Hooray!
@@ -1220,28 +1314,31 @@ Decode:
 	// 43 90 decodes as XCHG R8D, EAX and is *not* NOP.
 	// F3 90 decodes as REP XCHG EAX, EAX but is PAUSE.
 	// It's all too special to handle in the decoding tables, at least for now.
-	if inst.Op == XCHG && inst.Opcode>>24 == 0x90 {
-		if inst.Args[0] == RAX || inst.Args[0] == EAX || inst.Args[0] == AX {
-			inst.Op = NOP
-			if dataSizeIndex >= 0 {
-				inst.Prefix[dataSizeIndex] &^= PrefixImplicit
+	if (inst.Op == XCHG && inst.Opcode>>24 == 0x90 ){
+		if ( inst.Args[0] == RAX || inst.Args[0] == EAX || inst.Args[0] == AX ){
+			inst.Op = NOP;
+			if ( dataSizeIndex >= 0) {
+				// bit clear
+				// inst.Prefix[dataSizeIndex] &^= PrefixImplicit;
+				inst.Prefix[dataSizeIndex] &= ~(inst.Prefix[dataSizeIndex] & PrefixImplicit);
 			}
-			inst.Args[0] = nil
-			inst.Args[1] = nil
+			inst.Args[0] = -1;
+			inst.Args[1] = -1;
 		}
-		if repIndex >= 0 && inst.Prefix[repIndex] == 0xF3 {
-			inst.Prefix[repIndex] |= PrefixImplicit
-			inst.Op = PAUSE
-			inst.Args[0] = nil
-			inst.Args[1] = nil
-		} else if gnuCompat {
-			for i := nprefix - 1; i >= 0; i-- {
-				if inst.Prefix[i]&0xFF == 0xF3 {
-					inst.Prefix[i] |= PrefixImplicit
-					inst.Op = PAUSE
-					inst.Args[0] = nil
-					inst.Args[1] = nil
-					break
+		if (repIndex >= 0 && inst.Prefix[repIndex] == 0xF3 ){
+			inst.Prefix[repIndex] |= PrefixImplicit;
+			inst.Op = PAUSE;
+			inst.Args[0] = -1;
+			inst.Args[1] = -1;
+		} else if (gnuCompat) {
+			int i;
+			for (i = nprefix - 1; i >= 0; i-- ){
+				if (inst.Prefix[i]&0xFF == 0xF3 ){
+					inst.Prefix[i] |= PrefixImplicit;
+					inst.Op = PAUSE;
+					inst.Args[0] = -1;
+					inst.Args[1] = -1;
+					break;
 				}
 			}
 		}

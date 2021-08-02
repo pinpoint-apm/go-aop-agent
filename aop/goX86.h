@@ -19,16 +19,17 @@ extern "C"
 
 // the same as x86asm Inst
 #define PREFIX_SIZE 14
+
 typedef struct 
 {
     uint16_t Prefix[PREFIX_SIZE];
     uint32_t Op;
     uint32_t Opcode;
-    // Args     Args
+    Imm    Args[4];
     int Mode;
     int AddrSize;
     int DataSize;
-    int Membytes;
+    int MemBytes;
     int Len;
     int PCRel;
     int PCRelOff;

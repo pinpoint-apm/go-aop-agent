@@ -5,6 +5,9 @@
 #define uint16 uint16_t
 #endif
 
+typedef int64_t Imm;
+typedef uint8_t Reg;
+typedef int32_t Rel;
 
 #define decodeOp uint16
 
@@ -63,9 +66,9 @@ enum E_DECODEOP{
 	xArgM16and16     ,// arg m16&16
 	xArgM16and32     ,// arg m16&32
 	xArgM16and64     ,// arg m16&64
-	xArgM16colon16   ,// arg m16:16
-	xArgM16colon32   ,// arg m16:32
-	xArgM16colon64   ,// arg m16:64
+	xArgM16colon16   ,// arg m16=16
+	xArgM16colon32   ,// arg m16=32
+	xArgM16colon64   ,// arg m16=64
 	xArgM16int       ,// arg m16int
 	xArgM2byte       ,// arg m2byte
 	xArgM32          ,// arg m32
@@ -92,8 +95,8 @@ enum E_DECODEOP{
 	xArgMoffs32      ,// arg moffs32
 	xArgMoffs64      ,// arg moffs64
 	xArgMoffs8       ,// arg moffs8
-	xArgPtr16colon16 ,// arg ptr16:16
-	xArgPtr16colon32 ,// arg ptr16:32
+	xArgPtr16colon16 ,// arg ptr16=16
+	xArgPtr16colon32 ,// arg ptr16=32
 	xArgR16          ,// arg r16
 	xArgR16op        ,// arg r16 with +rw in opcode
 	xArgR32          ,// arg r32
@@ -9629,8 +9632,8 @@ static uint16 decoder[] = {
 	/*13429*/ (uint16)(xMatch)
 };
 
-//awk -F"[ :\"\t]+" '{print "["$2"]=\""$3"\","}' table.txt >table_out.txt
-const char* opNames[] = {
+//awk -F"[ =\"\t]+" '{print "["$2"]=\""$3"\","}' table.txt >table_out.txt
+static const char* opNames[] = {
 [AAA]="AAA",
 [AAD]="AAD",
 [AAM]="AAM",
@@ -10245,3 +10248,47 @@ const char* opNames[] = {
 [XSETBV]="XSETBV",
 [XTEST]="XTEST"
 };
+
+
+static Imm fixedArg[] ={
+	[xArg1]=    (1),
+	[xArg3]=    (3),
+	[xArgAL]=   AL,
+	[xArgAX]=   AX,
+	[xArgDX]=   DX,
+	[xArgEAX]=  EAX,
+	[xArgEDX]=  EDX,
+	[xArgRAX]=  RAX,
+	[xArgRDX]=  RDX,
+	[xArgCL]=   CL,
+	[xArgCS]=   CS,
+	[xArgDS]=   DS,
+	[xArgES]=   ES,
+	[xArgFS]=   FS,
+	[xArgGS]=   GS,
+	[xArgSS]=   SS,
+	[xArgST]=   F0,
+	[xArgXMM0]= X0,
+};
+
+typedef struct{
+	Reg Segment;
+	Reg Base;
+	uint8_t Scale;
+	Reg Index; 
+	int64_t Disp;
+}Mem;
+
+static Mem addr16[16]={
+	{.Base= BX, .Scale= 1, .Index= SI},
+	{.Base= BX, .Scale= 1, .Index= DI},
+	{.Base= BP, .Scale= 1, .Index= SI},
+	{.Base= BP, .Scale= 1, .Index= DI},
+	{.Base= SI},
+	{.Base= DI},
+	{.Base= BP},
+	{.Base= BX},
+};
+
+extern int8_t memBytes[123];
+extern Reg baseReg[127];
