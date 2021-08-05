@@ -1,56 +1,8 @@
 #include "goX86.h"
 #include "table.h"
+#include "Args.h"
+#include "Inst.h"
 
-typedef uint16_t Prefix;
-#ifndef bool
-typedef uint8_t bool;
-#define true  ((uint8_t)1)
-#define false ((uint8_t)0)
-#endif
-// typedef [14]uint16_t Prefixes;
-
-
-Prefix PrefixImplicit  = 0x8000; // prefix is implied by instruction text
-Prefix PrefixIgnored   = 0x4000; // prefix is ignored: either irrelevant or overridden by a later prefix
-Prefix PrefixInvalid   = 0x2000; // prefix makes entire instruction invalid (bad LOCK)
-
-// Memory segment overrides.
-Prefix PrefixES  = 0x26; // ES segment override
-Prefix PrefixCS  = 0x2E; // CS segment override
-Prefix PrefixSS  = 0x36; // SS segment override
-Prefix PrefixDS  = 0x3E; // DS segment override
-Prefix PrefixFS  = 0x64; // FS segment override
-Prefix PrefixGS  = 0x65; // GS segment override
-
-// Branch prediction.
-Prefix PrefixPN  = 0x12E; // predict not taken (conditional branch only)
-Prefix PrefixPT  = 0x13E; // predict taken (conditional branch only)
-
-// Size attributes.
-const Prefix PrefixDataSize  = 0x66; // operand size override
-Prefix PrefixData16    = 0x166;
-Prefix PrefixData32    = 0x266;
-const Prefix PrefixAddrSize  = 0x67; // address size override
-Prefix PrefixAddr16    = 0x167;
-Prefix PrefixAddr32    = 0x267;
-
-// One of a kind.
-Prefix PrefixLOCK      = 0xF0; // lock
-Prefix PrefixREPN      = 0xF2; // repeat not zero
-Prefix PrefixXACQUIRE  = 0x1F2;
-Prefix PrefixBND       = 0x2F2;
-Prefix PrefixREP       = 0xF3; // repeat
-Prefix PrefixXRELEASE  = 0x1F3;
-
-// The REX prefixes must be in the range [PrefixREX, PrefixREX+0x10).
-// the other bits are set or not according to the intended use.
-Prefix PrefixREX        = 0x40; // REX 64-bit extension prefix
-Prefix PrefixREXW       = 0x08; // extension bit W (64-bit instruction width)
-Prefix PrefixREXR       = 0x04; // extension bit R (r field in modrm)
-Prefix PrefixREXX       = 0x02; // extension bit X (index field in sib)
-Prefix PrefixREXB       = 0x01; // extension bit B (r/m field in modrm or base field in sib)
-Prefix PrefixVEX2Bytes  = 0xC5; // Short form of vex prefix
-Prefix PrefixVEX3Bytes  = 0xC4; // Long form of vex prefixs
 
 
 Inst instPrefix(Reg b,int mode );
@@ -116,6 +68,15 @@ Reg prefixToSegment(Prefix  p ) {
 }
 
 
+Reg	defaultSeg(int segIndex,Prefix* prefix) {
+	if (segIndex >= 0) {
+		prefix[segIndex] |= PrefixImplicit;
+		return prefixToSegment(prefix[segIndex]);
+	}
+	return DS;
+}
+
+
 Inst instPrefix(Reg b,int mode )
 {
 	// When tracing it is useful to see what called instPrefix to report an error.
@@ -146,7 +107,6 @@ Inst instPrefix(Reg b,int mode )
 	inst.Prefix[0] = p;
 	return inst;
 }
-
 
 
 unsigned int decode(Reg *src,int len, Inst *ld, int mode,bool gnuCompat)
@@ -630,20 +590,22 @@ ReadPrefixes:
 			}
 			break;
 		case xCondIsMem:
-			bool mem = haveMem;
-			if (!haveModrm) {
-				if (pos >= len) {
-					*ld = instPrefix(src[0], mode); // too long
-					return 0;
+			{
+				bool mem = haveMem;
+				if (!haveModrm) {
+					if (pos >= len) {
+						*ld = instPrefix(src[0], mode); // too long
+						return 0;
+					}
+					mem = src[pos]>>6 != 3;
 				}
-				mem = src[pos]>>6 != 3;
+				if (mem) {
+					pc = (decoder[pc+1]);
+				} else {
+					pc = (decoder[pc]);
+				}
+				break;
 			}
-			if (mem) {
-				pc = (decoder[pc+1]);
-			} else {
-				pc = (decoder[pc]);
-			}
-			break;
 		case xCondDataSize:
 			switch (dataMode) {
 			case 16:
@@ -1017,31 +979,31 @@ ReadPrefixes:
 		case	xArgSS:
 		case	xArgST:
 		case	xArgXMM0:
-			inst.Args[narg] = fixedArg[x];
+			inst.Args[narg] =  mk_imm_arg(fixedArg[x]);
 			narg++;
 			break;
 		case xArgImm8:
-			inst.Args[narg] = imm8;
+			inst.Args[narg] = mk_imm_arg(imm8);
 			narg++;
 			break;
 		case xArgImm8u:
-			inst.Args[narg] = imm8;
+			inst.Args[narg] = mk_imm_arg(imm8);
 			narg++;
 			break;
 		case xArgImm16:
-			inst.Args[narg] = imm;
+			inst.Args[narg] = mk_imm_arg(imm);
 			narg++;
 			break;
 		case xArgImm16u:
-			inst.Args[narg] = imm;
+			inst.Args[narg] = mk_imm_arg(imm);
 			narg++;
 			break;
 		case xArgImm32:
-			inst.Args[narg] = imm;
+			inst.Args[narg] = mk_imm_arg(imm);
 			narg++;
 			break;
 		case xArgImm64:
-			inst.Args[narg] =imm;
+			inst.Args[narg] =mk_imm_arg(imm);
 			narg++;
 			break;
 		case xArgM:
@@ -1075,7 +1037,7 @@ ReadPrefixes:
 				inst.Op = 0;
 				goto BREAK_DECODE;
 			}
-			inst.Args[narg] = mem;
+			inst.Args[narg] = mk_mem_arg(mem);
 			inst.MemBytes = memBytes[x];
 			if (mem.Base == RIP) {
 				inst.PCRel = displen;
@@ -1084,13 +1046,13 @@ ReadPrefixes:
 			narg++;
 			break;
 		case xArgPtr16colon16:
-			inst.Args[narg] = (immc >> 16);
-			inst.Args[narg+1] = (immc & (1<<16 - 1));
+			inst.Args[narg] = mk_imm_arg((immc >> 16));
+			inst.Args[narg+1] =mk_imm_arg( (immc & (1<<16 - 1)));
 			narg += 2;
 			break;
 		case xArgPtr16colon32:
-			inst.Args[narg] = (immc >> 32);
-			inst.Args[narg+1] = (immc & (1<<32 - 1));
+			inst.Args[narg] = mk_imm_arg((immc >> 32));
+			inst.Args[narg+1] =mk_imm_arg( (immc & (1<<32 - 1)));
 			narg += 2;
 			break;
 		case xArgMoffs8:
@@ -1104,7 +1066,7 @@ ReadPrefixes:
 					mem.Segment = prefixToSegment(inst.Prefix[segIndex]);
 					inst.Prefix[segIndex] |= PrefixImplicit;
 				}
-				inst.Args[narg] = mem;
+				inst.Args[narg] = mk_mem_arg( mem);
 				inst.MemBytes = memBytes[x];
 				if (mem.Base == RIP) {
 					inst.PCRel = displen;
@@ -1119,7 +1081,7 @@ ReadPrefixes:
 			if (inst.Prefix[vexIndex+1]&0x80 == 0 ){
 				index += 8;
 			}
-			inst.Args[narg] = base + index;
+			inst.Args[narg] = mk_imm_arg( base + index);
 			narg++;
 			break;
 		case xArgR8:
@@ -1136,13 +1098,13 @@ ReadPrefixes:
 				index -= 4;
 				base = SPB;
 			}
-			inst.Args[narg] = base + index;
+			inst.Args[narg] = mk_imm_arg(base + index);
 			narg++;
 			break;
 		case xArgMm:
 		case xArgMm1:
 		case xArgTR0dashTR7:
-			inst.Args[narg] = baseReg[x] + (regop&7);
+			inst.Args[narg] =mk_imm_arg(baseReg[x] + (regop&7));
 			narg++;
 			break;
 		case xArgCR0dashCR7:
@@ -1154,7 +1116,7 @@ ReadPrefixes:
 				inst.Prefix[lockIndex] |= PrefixImplicit;
 				regop += 8;
 			}
-			inst.Args[narg] = CR0 + (regop);
+			inst.Args[narg] =mk_imm_arg( CR0 + (regop));
 			narg++;
 			break;
 		case xArgSreg:
@@ -1163,7 +1125,7 @@ ReadPrefixes:
 				inst.Op = 0;
 				goto BREAK_DECODE;
 			}
-			inst.Args[narg] = ES + (regop);
+			inst.Args[narg] =mk_imm_arg( ES + (regop));
 			narg++;
 			break;
 
@@ -1176,7 +1138,7 @@ ReadPrefixes:
 				rexUsed |= PrefixREXB;
 				index += 8;
 			}
-			inst.Args[narg] = base + index;
+			inst.Args[narg] = mk_imm_arg(base + index);
 			narg++;
 			break;
 		case xArgR8op:
@@ -1196,7 +1158,7 @@ ReadPrefixes:
 				index -= 4;
 				base = SPB;
 			}
-			inst.Args[narg] = base + index;
+			inst.Args[narg] =mk_imm_arg( base + index);
 			narg++;
 			break;
 		case xArgRM8:
@@ -1218,7 +1180,7 @@ ReadPrefixes:
 		case  xArgXmm2M128:
 	    case xArgYmm2M256:
 			if (haveMem) {
-				inst.Args[narg] = mem;
+				inst.Args[narg] =mk_mem_arg( mem);
 				inst.MemBytes = memBytes[(x)];
 				if (mem.Base == RIP) {
 					inst.PCRel = displen;
@@ -1247,7 +1209,7 @@ ReadPrefixes:
 					}
 					break;
 				}
-				inst.Args[narg] = base + index;
+				inst.Args[narg] =mk_imm_arg( base + index);
 			}
 			narg++;
 			break;
@@ -1256,7 +1218,7 @@ ReadPrefixes:
 				inst.Op = 0;
 				goto BREAK_DECODE;
 			}
-			inst.Args[narg] = baseReg[x] + (rm&7);
+			inst.Args[narg] =mk_imm_arg( baseReg[x] + (rm&7));
 			narg++;
 			break;
 		case xArgXmm2: // register only; TODO(rsc): Handle with tag modrm_regonly tag
@@ -1264,25 +1226,25 @@ ReadPrefixes:
 				inst.Op = 0;
 				goto BREAK_DECODE;
 			}
-			inst.Args[narg] = baseReg[x] + (rm);
+			inst.Args[narg] =mk_imm_arg( baseReg[x] + (rm));
 			narg++;
 			break;
 		case xArgRel8:
 			inst.PCRelOff = immcpos;
 			inst.PCRel = 1;
-			inst.Args[narg] = (Rel)(immc);
+			inst.Args[narg] =mk_imm_arg( (Rel)(immc));
 			narg++;
 			break;
 		case xArgRel16:
 			inst.PCRelOff = immcpos;
 			inst.PCRel = 2;
-			inst.Args[narg] = (Rel)(immc);
+			inst.Args[narg] =mk_imm_arg( (Rel)(immc));
 			narg++;
 			break;
 		case xArgRel32:
 			inst.PCRelOff = immcpos;
 			inst.PCRel = 4;
-			inst.Args[narg] = (Rel)(immc);
+			inst.Args[narg] =mk_imm_arg( (Rel)(immc));
 			narg++;
 			break;
 		}
@@ -1315,29 +1277,33 @@ BREAK_DECODE:
 	// F3 90 decodes as REP XCHG EAX, EAX but is PAUSE.
 	// It's all too special to handle in the decoding tables, at least for now.
 	if (inst.Op == XCHG && inst.Opcode>>24 == 0x90 ){
-		if ( inst.Args[0] == RAX || inst.Args[0] == EAX || inst.Args[0] == AX ){
+		Imm* value = get_imm_arg(&inst.Args[0]);
+
+		if ( (value !=NULL) &&( *value == RAX || *value == EAX || *value == AX )){
 			inst.Op = NOP;
 			if ( dataSizeIndex >= 0) {
 				// bit clear
 				// inst.Prefix[dataSizeIndex] &^= PrefixImplicit;
-				inst.Prefix[dataSizeIndex] &= ~(inst.Prefix[dataSizeIndex] & PrefixImplicit);
+				Prefix t =inst.Prefix[dataSizeIndex];
+				t &= ~(t&PrefixImplicit);
+				inst.Prefix[dataSizeIndex] =t;
 			}
-			inst.Args[0] = -1;
-			inst.Args[1] = -1;
+			inst.Args[0] = mk_nil_arg();
+			inst.Args[1] = mk_nil_arg();
 		}
 		if (repIndex >= 0 && inst.Prefix[repIndex] == 0xF3 ){
 			inst.Prefix[repIndex] |= PrefixImplicit;
 			inst.Op = PAUSE;
-			inst.Args[0] = -1;
-			inst.Args[1] = -1;
+			inst.Args[0] = mk_nil_arg();
+			inst.Args[1] = mk_nil_arg();
 		} else if (gnuCompat) {
 			int i;
 			for (i = nprefix - 1; i >= 0; i-- ){
 				if (inst.Prefix[i]&0xFF == 0xF3 ){
 					inst.Prefix[i] |= PrefixImplicit;
 					inst.Op = PAUSE;
-					inst.Args[0] = -1;
-					inst.Args[1] = -1;
+					inst.Args[0] = mk_nil_arg();
+					inst.Args[1] = mk_nil_arg();
 					break;
 				}
 			}
@@ -1346,13 +1312,13 @@ BREAK_DECODE:
 
 	// defaultSeg returns the default segment for an implicit
 	// memory reference: the final override if present, or else DS.
-	defaultSeg := func() Reg {
-		if segIndex >= 0 {
-			inst.Prefix[segIndex] |= PrefixImplicit
-			return prefixToSegment(inst.Prefix[segIndex])
-		}
-		return DS
-	}
+	// defaultSeg := func() Reg {
+	// 	if segIndex >= 0 {
+	// 		inst.Prefix[segIndex] |= PrefixImplicit
+	// 		return prefixToSegment(inst.Prefix[segIndex])
+	// 	}
+	// 	return DS
+	// }
 
 	// Add implicit arguments not present in the tables.
 	// Normally we shy away from making implicit arguments explicit,
@@ -1360,90 +1326,154 @@ BREAK_DECODE:
 	// the best way to express the effect of the segment override prefixes.
 	// TODO(rsc): Perhaps add these to the tables and
 	// create bytecode instructions for them.
-	usedAddrSize := false
-	switch inst.Op {
-	case INSB, INSW, INSD:
-		inst.Args[0] = Mem{Segment: ES, Base: baseRegForBits(addrMode) + DI - AX}
-		inst.Args[1] = DX
-		usedAddrSize = true
+	bool usedAddrSize = false;
+	switch (inst.Op) {
+		case INSB:
+		case INSW:
+		case INSD:
+			{
+				Mem mem = {.Segment= ES, .Base= baseRegForBits(addrMode) + DI - AX};
+				inst.Args[0] = mk_mem_arg(mem);
+				inst.Args[1] = mk_imm_arg(DX);
+				usedAddrSize = true;
+				break;
+			}
+		case OUTSB:
+		case OUTSW:
+		case OUTSD:
+			{
+				inst.Args[0] = mk_imm_arg(DX);
+				Mem mem = {.Segment=defaultSeg(segIndex,inst.Prefix), 
+							.Base= baseRegForBits(addrMode) + SI - AX};
+				inst.Args[1] = mk_mem_arg(mem); 
+				usedAddrSize = true;
+				break;
+			}
+		case MOVSB:
+		case MOVSW:
+		case MOVSD:
+		case MOVSQ:
+			{
+				Mem mem = {.Segment= ES, .Base= baseRegForBits(addrMode) + DI - AX};
+				inst.Args[0] = mk_mem_arg(mem);
+				Mem mem1 = {.Segment=defaultSeg(segIndex,inst.Prefix), .Base= baseRegForBits(addrMode) + SI - AX};
+				inst.Args[1] =mk_mem_arg( mem1);//Mem{Segment: defaultSeg(), Base: baseRegForBits(addrMode) + SI - AX}
+				usedAddrSize = true;
+				break;
+			}
 
-	case OUTSB, OUTSW, OUTSD:
-		inst.Args[0] = DX
-		inst.Args[1] = Mem{Segment: defaultSeg(), Base: baseRegForBits(addrMode) + SI - AX}
-		usedAddrSize = true
+		case CMPSB:
+		case CMPSW:
+		case CMPSD:
+		case CMPSQ:
+			{
+				Mem mem = {.Segment= defaultSeg(segIndex,inst.Prefix), .Base= baseRegForBits(addrMode) + SI - AX};
+				inst.Args[0] = mk_mem_arg(mem);// Mem{Segment: defaultSeg(), Base: baseRegForBits(addrMode) + SI - AX}
+				Mem mem1 = {.Segment= ES, .Base=baseRegForBits(addrMode) + DI - AX};
+				inst.Args[1] = mk_mem_arg(mem1);//Mem{Segment: ES, Base: baseRegForBits(addrMode) + DI - AX}
+				usedAddrSize = true;
+				break;
+			}
 
-	case MOVSB, MOVSW, MOVSD, MOVSQ:
-		inst.Args[0] = Mem{Segment: ES, Base: baseRegForBits(addrMode) + DI - AX}
-		inst.Args[1] = Mem{Segment: defaultSeg(), Base: baseRegForBits(addrMode) + SI - AX}
-		usedAddrSize = true
-
-	case CMPSB, CMPSW, CMPSD, CMPSQ:
-		inst.Args[0] = Mem{Segment: defaultSeg(), Base: baseRegForBits(addrMode) + SI - AX}
-		inst.Args[1] = Mem{Segment: ES, Base: baseRegForBits(addrMode) + DI - AX}
-		usedAddrSize = true
-
-	case LODSB, LODSW, LODSD, LODSQ:
-		switch inst.Op {
 		case LODSB:
-			inst.Args[0] = AL
-		case LODSW:
-			inst.Args[0] = AX
+		case LODSW: 
 		case LODSD:
-			inst.Args[0] = EAX
 		case LODSQ:
-			inst.Args[0] = RAX
-		}
-		inst.Args[1] = Mem{Segment: defaultSeg(), Base: baseRegForBits(addrMode) + SI - AX}
-		usedAddrSize = true
+			{
 
-	case STOSB, STOSW, STOSD, STOSQ:
-		inst.Args[0] = Mem{Segment: ES, Base: baseRegForBits(addrMode) + DI - AX}
-		switch inst.Op {
+				switch (inst.Op) {
+				case LODSB:
+					inst.Args[0] =mk_imm_arg( AL);
+					break;
+				case LODSW:
+					inst.Args[0] = mk_imm_arg(AX);
+					break;
+				case LODSD:
+					inst.Args[0] = mk_imm_arg(EAX);
+					break;
+				case LODSQ:
+					inst.Args[0] = mk_imm_arg(RAX);
+					break;
+				}
+				Mem mem = {.Segment=defaultSeg(segIndex,inst.Prefix), .Base= baseRegForBits(addrMode) + SI - AX};
+				inst.Args[1] = mk_mem_arg(mem);//Mem{Segment: defaultSeg(), Base: baseRegForBits(addrMode) + SI - AX}
+				usedAddrSize = true;
+				break;
+			}
 		case STOSB:
-			inst.Args[1] = AL
 		case STOSW:
-			inst.Args[1] = AX
 		case STOSD:
-			inst.Args[1] = EAX
 		case STOSQ:
-			inst.Args[1] = RAX
+		{
+			Mem mem = {.Segment= ES, .Base= baseRegForBits(addrMode) + DI - AX};
+			inst.Args[0] =mk_mem_arg( mem) ;// Mem{Segment: ES, Base: baseRegForBits(addrMode) + DI - AX}
+			switch (inst.Op) {
+			case STOSB:
+				inst.Args[1] = mk_imm_arg( AL);
+				break;
+			case STOSW:
+				inst.Args[1] = mk_imm_arg(AX);
+				break;
+			case STOSD:
+				inst.Args[1] = mk_imm_arg(EAX);
+				break;
+			case STOSQ:
+				inst.Args[1] = mk_imm_arg(RAX);
+				break;
+			}
+			usedAddrSize = true;
+			break;
 		}
-		usedAddrSize = true
 
-	case SCASB, SCASW, SCASD, SCASQ:
-		inst.Args[1] = Mem{Segment: ES, Base: baseRegForBits(addrMode) + DI - AX}
-		switch inst.Op {
 		case SCASB:
-			inst.Args[0] = AL
 		case SCASW:
-			inst.Args[0] = AX
 		case SCASD:
-			inst.Args[0] = EAX
 		case SCASQ:
-			inst.Args[0] = RAX
+		{
+			Mem mem ={.Segment= ES, .Base= baseRegForBits(addrMode) + DI - AX};
+			inst.Args[1] = mk_mem_arg(mem);//Mem{Segment: ES, Base: baseRegForBits(addrMode) + DI - AX}
+			switch (inst.Op) {
+			case SCASB:
+				inst.Args[0] = mk_imm_arg(AL);
+				break;
+			case SCASW:
+				inst.Args[0] =mk_imm_arg( AX);
+				break;
+			case SCASD:
+				inst.Args[0] = mk_imm_arg(EAX);
+				break;
+			case SCASQ:
+				inst.Args[0] = mk_imm_arg( RAX);
+				break;
+			}
+			usedAddrSize = true;
+			break;
 		}
-		usedAddrSize = true
 
-	case XLATB:
-		inst.Args[0] = Mem{Segment: defaultSeg(), Base: baseRegForBits(addrMode) + BX - AX}
-		usedAddrSize = true
+		case XLATB:
+		{
+			Mem mem = {.Segment= defaultSeg(segIndex,inst.Prefix), .Base=baseRegForBits(addrMode) + BX - AX};
+			inst.Args[0] = mk_mem_arg(mem);// Mem{Segment: defaultSeg(), Base: baseRegForBits(addrMode) + BX - AX};
+			usedAddrSize = true;
+			break;
+		}
 	}
 
 	// If we used the address size annotation to construct the
 	// argument list, mark that prefix as implicit: it doesn't need
 	// to be shown when printing the instruction.
-	if haveMem || usedAddrSize {
-		if addrSizeIndex >= 0 {
-			inst.Prefix[addrSizeIndex] |= PrefixImplicit
+	if (haveMem || usedAddrSize) {
+		if (addrSizeIndex >= 0) {
+			inst.Prefix[addrSizeIndex] |= PrefixImplicit;
 		}
 	}
 
 	// Similarly, if there's some memory operand, the segment
 	// will be shown there and doesn't need to be shown as an
 	// explicit prefix.
-	if haveMem {
-		if segIndex >= 0 {
-			inst.Prefix[segIndex] |= PrefixImplicit
+	if (haveMem) {
+		if (segIndex >= 0 ){
+			inst.Prefix[segIndex] |= PrefixImplicit;
 		}
 	}
 
@@ -1455,19 +1485,20 @@ BREAK_DECODE:
 	// the disassemblers seem to agree about the LOOP and JCXZ instructions,
 	// so we'll follow along.
 	// TODO(rsc): Perhaps this instruction class should be derived from the CSV.
-	if isCondJmp[inst.Op] || isLoop[inst.Op] || inst.Op == JCXZ || inst.Op == JECXZ || inst.Op == JRCXZ {
-	PredictLoop:
-		for i := nprefix - 1; i >= 0; i-- {
-			p := inst.Prefix[i]
-			switch p & 0xFF {
+	if (isCondJmp[inst.Op] || isLoop[inst.Op] || inst.Op == JCXZ || inst.Op == JECXZ || inst.Op == JRCXZ ){
+		int i = nprefix - 1;
+		for ( ; i >= 0; i-- ){
+			Prefix p = inst.Prefix[i];
+			switch (p & 0xFF ){
 			case PrefixCS:
-				inst.Prefix[i] = PrefixPN
-				break PredictLoop
+				inst.Prefix[i] = PrefixPN;
+				goto PredictLoop;
 			case PrefixDS:
-				inst.Prefix[i] = PrefixPT
-				break PredictLoop
+				inst.Prefix[i] = PrefixPT;
+				goto PredictLoop;
 			}
 		}
+	PredictLoop:
 	}
 
 	// The BND prefix is part of the Intel Memory Protection Extensions (MPX).
@@ -1477,12 +1508,14 @@ BREAK_DECODE:
 	// In particular, it's unclear why a REPN applied to LOOP or JCXZ instructions
 	// does not turn into a BND.
 	// TODO(rsc): Perhaps this instruction class should be derived from the CSV.
-	if isCondJmp[inst.Op] || inst.Op == JMP || inst.Op == CALL || inst.Op == RET {
-		for i := nprefix - 1; i >= 0; i-- {
-			p := inst.Prefix[i]
-			if p&^PrefixIgnored == PrefixREPN {
-				inst.Prefix[i] = PrefixBND
-				break
+	if (isCondJmp[inst.Op] || inst.Op == JMP || inst.Op == CALL || inst.Op == RET) {
+		int i = nprefix - 1;
+		for(; i >= 0; i-- ){
+			Prefix p = inst.Prefix[i];
+			p &= ~(p&PrefixIgnored);
+			if (p  == PrefixREPN ){
+				inst.Prefix[i] = PrefixBND;
+				break;
 			}
 		}
 	}
@@ -1492,18 +1525,26 @@ BREAK_DECODE:
 	// Other uses of LOCK are invalid and cause a processor exception,
 	// in contrast to the "just ignore it" spirit applied to all other prefixes.
 	// Mark invalid lock prefixes.
-	hasLock := false
-	if lockIndex >= 0 && inst.Prefix[lockIndex]&PrefixImplicit == 0 {
-		switch inst.Op {
+	bool hasLock = false;
+	if (lockIndex >= 0 && inst.Prefix[lockIndex]&PrefixImplicit == 0 ){
+		switch (inst.Op) {
 		// TODO(rsc): Perhaps this instruction class should be derived from the CSV.
-		case ADD, ADC, AND, BTC, BTR, BTS, CMPXCHG, CMPXCHG8B, CMPXCHG16B, DEC, INC, NEG, NOT, OR, SBB, SUB, XOR, XADD, XCHG:
-			if isMem(inst.Args[0]) {
-				hasLock = true
-				break
+		case ADD:
+		case ADC:
+		case AND: case BTC:case BTR: case BTS:
+		case CMPXCHG: case CMPXCHG8B: 
+		case CMPXCHG16B: case DEC: case INC: 
+		case NEG: case NOT: case OR: 
+		case SBB: case SUB: case XOR: 
+		case XADD: case XCHG:
+			if (isMem(inst.Args[0])) {
+				hasLock = true;
+				break;
 			}
-			fallthrough
+			// note: call default tag
+			// fallthrough
 		default:
-			inst.Prefix[lockIndex] |= PrefixInvalid
+			inst.Prefix[lockIndex] |= PrefixInvalid;
 		}
 	}
 
@@ -1515,72 +1556,86 @@ BREAK_DECODE:
 	// (1) Any instruction with a valid LOCK prefix can have XACQUIRE or XRELEASE.
 	// (2) Any XCHG, which always has an implicit LOCK, can have XACQUIRE or XRELEASE.
 	// (3) Any 0x88-, 0x89-, 0xC6-, or 0xC7-opcode MOV can have XRELEASE.
-	if isMem(inst.Args[0]) {
-		if inst.Op == XCHG {
-			hasLock = true
+	if (IS_IMM(inst.Args[0])) {
+		if (inst.Op == XCHG ){
+			hasLock = true;
 		}
+		int i;
+		for( i = PREFIX_SIZE - 1; i >= 0; i-- ){
+			Prefix p = inst.Prefix[i];
+			p &= ~(p & PrefixIgnored);
 
-		for i := len(inst.Prefix) - 1; i >= 0; i-- {
-			p := inst.Prefix[i] &^ PrefixIgnored
-			switch p {
+			switch (p) {
 			case PrefixREPN:
-				if hasLock {
-					inst.Prefix[i] = inst.Prefix[i]&PrefixIgnored | PrefixXACQUIRE
+				if (hasLock) {
+					inst.Prefix[i] = inst.Prefix[i]&PrefixIgnored | PrefixXACQUIRE;
 				}
-
+				break;
 			case PrefixREP:
-				if hasLock {
-					inst.Prefix[i] = inst.Prefix[i]&PrefixIgnored | PrefixXRELEASE
+				if (hasLock) {
+					inst.Prefix[i] = inst.Prefix[i]&PrefixIgnored | PrefixXRELEASE;
 				}
 
-				if inst.Op == MOV {
-					op := (inst.Opcode >> 24) &^ 1
-					if op == 0x88 || op == 0xC6 {
-						inst.Prefix[i] = inst.Prefix[i]&PrefixIgnored | PrefixXRELEASE
+				if (inst.Op == MOV) {
+					Reg op = (inst.Opcode >> 24);
+					 op &= ~(op &1);
+					if (op == 0x88 || op == 0xC6 ){
+						inst.Prefix[i] = inst.Prefix[i]&PrefixIgnored | PrefixXRELEASE;
 					}
 				}
+				break;
 			}
 		}
 	}
 
 	// If REP is used on a non-REP-able instruction, mark the prefix as ignored.
-	if repIndex >= 0 {
-		switch inst.Prefix[repIndex] {
-		case PrefixREP, PrefixREPN:
-			switch inst.Op {
+	if (repIndex >= 0) {
+		switch (inst.Prefix[repIndex]) {
+		case PrefixREP:
+		case PrefixREPN:
+			switch (inst.Op) {
 			// According to the manuals, the REP/REPE prefix applies to all of these,
 			// while the REPN applies only to some of them. However, both libopcodes
 			// and xed show both prefixes explicitly for all instructions, so we do the same.
 			// TODO(rsc): Perhaps this instruction class should be derived from the CSV.
-			case INSB, INSW, INSD,
-				MOVSB, MOVSW, MOVSD, MOVSQ,
-				OUTSB, OUTSW, OUTSD,
-				LODSB, LODSW, LODSD, LODSQ,
-				CMPSB, CMPSW, CMPSD, CMPSQ,
-				SCASB, SCASW, SCASD, SCASQ,
-				STOSB, STOSW, STOSD, STOSQ:
+			case INSB:  
+			case INSW:  
+			case INSD:  
+			case MOVSB:  
+			case MOVSW:  
+			case MOVSD:  
+			case MOVSQ:  
+			case OUTSB:  
+			case OUTSW:  
+			case OUTSD:  
+			case LODSB:  case LODSW:  case LODSD:  case LODSQ:  
+			case CMPSB:  case CMPSW:  case CMPSD:  case CMPSQ:  
+			case SCASB:  case SCASW:  case SCASD:  case SCASQ:  
+			case STOSB:  case STOSW:  case STOSD:  case STOSQ:
 				// ok
+				break;
 			default:
-				inst.Prefix[repIndex] |= PrefixIgnored
+				inst.Prefix[repIndex] |= PrefixIgnored;
 			}
 		}
 	}
 
 	// If REX was present, mark implicit if all the 1 bits were consumed.
-	if rexIndex >= 0 {
-		if rexUsed != 0 {
-			rexUsed |= PrefixREX
+	if (rexIndex >= 0) {
+		if (rexUsed != 0) {
+			rexUsed |= PrefixREX;
 		}
-		if rex&^rexUsed == 0 {
-			inst.Prefix[rexIndex] |= PrefixImplicit
+		Prefix fix =  rex;
+		fix &= ~(fix & rexUsed);
+		if (fix == 0) {
+			inst.Prefix[rexIndex] |= PrefixImplicit;
 		}
 	}
 
-	inst.DataSize = dataMode
-	inst.AddrSize = addrMode
-	inst.Mode = mode
-	inst.Len = pos
-	return inst, nil
-}
-
+	inst.DataSize = dataMode;
+	inst.AddrSize = addrMode;
+	inst.Mode = mode;
+	inst.Len = pos;
+	*ld = inst;
+	return 0;
 }
