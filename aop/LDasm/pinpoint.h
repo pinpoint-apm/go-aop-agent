@@ -30,7 +30,6 @@
 #else
 #define LOG_TRACE(fmt,args...) 
 #endif
-
 typedef unsigned char INST;
 
 typedef struct trampoline_forward_s{

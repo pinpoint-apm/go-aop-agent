@@ -37,11 +37,11 @@ void args_str(ArgsT* args,char* buf ,int size)
 {
 	switch(args->type){
 		case E_IMM:
-			snprintf(buf,size,"%x",args->value.imm);
+			snprintf(buf,size,"%lx",args->value.imm);
 		break;
 		case E_MEM:
+		{
 			Mem* m = get_mem_arg(args);
-
 			if(m == NULL) return ;
 			char scaleBuf[32]={0};
 			char dispBuf[32]={0};
@@ -60,12 +60,12 @@ void args_str(ArgsT* args,char* buf ,int size)
 				index = reg_name(m->Index);
 			}
 
-			if(m->Disp !=0 || m->Base == 0 &&  m->Scale == 0) {
-				snprintf(dispBuf,32,"%lld",m->Disp);
+			if( (m->Disp !=0 || m->Base == 0) &&  m->Scale == 0) {
+				snprintf(dispBuf,32,"%ld",m->Disp);
 			}
 			snprintf(buf,size,"[%s%s%s%s%s]",baseStr,plus,scaleBuf,index,dispBuf);
 			break;
-		break;
+		}
 		case E_NIL:
 			snprintf(buf,size,"nil");
 		break;

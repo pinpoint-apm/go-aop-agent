@@ -1,7 +1,7 @@
 #include "table.h"
 #include <stdio.h>
 
-static uint16 decoder[] = {
+uint16 decoder[] = {
     	(uint16)(xFail),
 	/*1*/ (uint16)(xCondByte), 243,
 	0x00, 490,
@@ -8803,7 +8803,7 @@ int8_t memBytes[123] = {
 };
 
 
-bool isCondJmp[maxOp + 1] = {
+bool isCondJmp[XTEST + 1] = {
 	[JA]=  true,
 	[JAE]= true,
 	[JB]=  true,
@@ -8822,7 +8822,7 @@ bool isCondJmp[maxOp + 1] = {
 	[JS]=  true,
 };
 
-bool isLoop [maxOp + 1] ={
+bool isLoop [XTEST + 1] ={
 	[LOOP]=   true,
 	[LOOPE]=  true,
 	[LOOPNE]= true,
@@ -9607,7 +9607,7 @@ static const char* regNames[] = {
 
 const char* op_name(uint16 op)
 {
-	if(op<0 || op >= sizeof(opNames)/sizeof(opNames[0]) || opNames[op] == NULL){
+	if( op >= sizeof(opNames)/sizeof(opNames[0]) || opNames[op] == NULL){
 		return	"UNKNOWN_OP";
 	}
 	return opNames[op];
@@ -9615,7 +9615,7 @@ const char* op_name(uint16 op)
 
 const char* reg_name(Reg reg)
 {
-	if(reg<0 || reg >= sizeof(regNames)/sizeof(regNames[0]) || regNames[reg] == NULL){
+	if( reg >= sizeof(regNames)/sizeof(regNames[0]) || regNames[reg] == NULL){
 		return	"UNKNOWN_REG";
 	}
 	return regNames[reg];

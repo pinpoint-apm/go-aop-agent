@@ -5,7 +5,7 @@
 void inst_str(Inst* inst,char* buf,int buf_size)
 {
 	int i = 0;
-	if(buf == NULL || inst == NULL || buf_size  >0){
+	if(buf == NULL || inst == NULL || buf_size <=0){
 		return ;
 	}
 	//parse prefix
@@ -17,7 +17,7 @@ void inst_str(Inst* inst,char* buf,int buf_size)
 			break;
 		}
 
-		if (p&PrefixImplicit !=0){
+		if ( (p&PrefixImplicit) !=0){
 			continue;
 		}
 		done = snprintf(pbuf,buf_size,"%hu",p);

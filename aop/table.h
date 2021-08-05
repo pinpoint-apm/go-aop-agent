@@ -1,9 +1,12 @@
 #pragma once
+
 #include <stdint.h>
 
 #ifndef uint16
 #define uint16 uint16_t
+// typedef uint16_t uint16;
 #endif
+
 typedef uint16_t Prefix;
 
 typedef int64_t Imm;
@@ -19,47 +22,47 @@ typedef uint8_t bool;
 
 #define decodeOp uint16
 
-const Prefix PrefixImplicit  = 0x8000; // prefix is implied by instruction text
-const Prefix PrefixIgnored   = 0x4000; // prefix is ignored: either irrelevant or overridden by a later prefix
-const Prefix PrefixInvalid   = 0x2000; // prefix makes entire instruction invalid (bad LOCK)
+#define PrefixImplicit   0x8000  // prefix is implied by instruction text
+#define PrefixIgnored    0x4000  // prefix is ignored: either irrelevant or overridden by a later prefix
+#define PrefixInvalid    0x2000  // prefix makes entire instruction invalid (bad LOCK)
 
 // Memory segment overrides.
-const Prefix PrefixES  = 0x26; // ES segment override
-const Prefix PrefixCS  = 0x2E; // CS segment override
-const Prefix PrefixSS  = 0x36; // SS segment override
-const Prefix PrefixDS  = 0x3E; // DS segment override
-const Prefix PrefixFS  = 0x64; // FS segment override
-const Prefix PrefixGS  = 0x65; // GS segment override
+#define PrefixES   0x26  // ES segment override
+#define PrefixCS   0x2E  // CS segment override
+#define PrefixSS   0x36  // SS segment override
+#define PrefixDS   0x3E  // DS segment override
+#define PrefixFS   0x64  // FS segment override
+#define PrefixGS   0x65  // GS segment override
 
 // Branch prediction.
-const Prefix PrefixPN  = 0x12E; // predict not taken (conditional branch only)
-const Prefix PrefixPT  = 0x13E; // predict taken (conditional branch only)
+#define PrefixPN   0x12E  // predict not taken (conditional branch only)
+#define PrefixPT   0x13E  // predict taken (conditional branch only)
 
 // Size attributes.
-const Prefix PrefixDataSize  = 0x66; // operand size override
-const Prefix PrefixData16    = 0x166;
-const Prefix PrefixData32    = 0x266;
-const Prefix PrefixAddrSize  = 0x67; // address size override
-const Prefix PrefixAddr16    = 0x167;
-const Prefix PrefixAddr32    = 0x267;
+#define PrefixDataSize   0x66  // operand size override
+#define PrefixData16     0x166 
+#define PrefixData32     0x266 
+#define PrefixAddrSize   0x67  // address size override
+#define PrefixAddr16     0x167 
+#define PrefixAddr32     0x267 
 
 // One of a kind.
-const Prefix PrefixLOCK      = 0xF0; // lock
-const Prefix PrefixREPN      = 0xF2; // repeat not zero
-const Prefix PrefixXACQUIRE  = 0x1F2;
-const Prefix PrefixBND       = 0x2F2;
-const Prefix PrefixREP       = 0xF3; // repeat
-const Prefix PrefixXRELEASE  = 0x1F3;
+#define PrefixLOCK       0xF0  // lock
+#define PrefixREPN       0xF2  // repeat not zero
+#define PrefixXACQUIRE   0x1F2 
+#define PrefixBND        0x2F2 
+#define PrefixREP        0xF3  // repeat
+#define PrefixXRELEASE   0x1F3 
 
 // The REX prefixes must be in the range [PrefixREX, PrefixREX+0x10).
 // the other bits are set or not according to the intended use.
-const Prefix PrefixREX        = 0x40; // REX 64-bit extension prefix
-const Prefix PrefixREXW       = 0x08; // extension bit W (64-bit instruction width)
-const Prefix PrefixREXR       = 0x04; // extension bit R (r field in modrm)
-const Prefix PrefixREXX       = 0x02; // extension bit X (index field in sib)
-const Prefix PrefixREXB       = 0x01; // extension bit B (r/m field in modrm or base field in sib)
-const Prefix PrefixVEX2Bytes  = 0xC5; // Short form of vex prefix
-const Prefix PrefixVEX3Bytes  = 0xC4; // Long form of vex prefixs
+#define PrefixREX         0x40  // REX 64-bit extension prefix
+#define PrefixREXW        0x08  // extension bit W (64-bit instruction width)
+#define PrefixREXR        0x04  // extension bit R (r field in modrm)
+#define PrefixREXX        0x02  // extension bit X (index field in sib)
+#define PrefixREXB        0x01  // extension bit B (r/m field in modrm or base field in sib)
+#define PrefixVEX2Bytes   0xC5  // Short form of vex prefix
+#define PrefixVEX3Bytes   0xC4  // Long form of vex prefixs
 
 
 enum E_DECODEOP{
@@ -1007,14 +1010,13 @@ typedef struct{
 	int64_t Disp;
 }Mem;
 
-const static int maxOp = XTEST;
 
 extern Imm fixedArg[113];
 extern Mem addr16[16];
 extern int8_t memBytes[123];
 extern Reg baseReg[127];
-extern bool isCondJmp[maxOp+1];
-extern bool isLoop[maxOp + 1];
+extern bool isCondJmp[XTEST+1];
+extern bool isLoop[XTEST + 1];
 extern const char* opNames[614];
 extern uint16 decoder[13430] ;
 
