@@ -1096,7 +1096,7 @@ ReadPrefixes:
 			if ( (inst.Prefix[vexIndex+1]&0x80) == 0 ){
 				index += 8;
 			}
-			inst.Args[narg] = mk_imm_arg( base + index);
+			inst.Args[narg] = mk_reg_arg( base + index);
 			narg++;
 			break;
 		}
@@ -1115,14 +1115,14 @@ ReadPrefixes:
 				index -= 4;
 				base = SPB;
 			}
-			inst.Args[narg] = mk_imm_arg(base + index);
+			inst.Args[narg] = mk_reg_arg(base + index);
 			narg++;
 			break;
 		}
 		case xArgMm:
 		case xArgMm1:
 		case xArgTR0dashTR7:
-			inst.Args[narg] =mk_imm_arg(baseReg[x] + (regop&7));
+			inst.Args[narg] =mk_reg_arg(baseReg[x] + (regop&7));
 			narg++;
 			break;
 		case xArgCR0dashCR7:
@@ -1134,7 +1134,7 @@ ReadPrefixes:
 				inst.Prefix[lockIndex] |= PrefixImplicit;
 				regop += 8;
 			}
-			inst.Args[narg] =mk_imm_arg( CR0 + (regop));
+			inst.Args[narg] =mk_reg_arg( CR0 + (regop));
 			narg++;
 			break;
 		case xArgSreg:
@@ -1143,7 +1143,7 @@ ReadPrefixes:
 				inst.Op = 0;
 				goto BREAK_DECODE;
 			}
-			inst.Args[narg] =mk_imm_arg( ES + (regop));
+			inst.Args[narg] =mk_reg_arg( ES + (regop));
 			narg++;
 			break;
 
@@ -1157,7 +1157,7 @@ ReadPrefixes:
 				rexUsed |= PrefixREXB;
 				index += 8;
 			}
-			inst.Args[narg] = mk_imm_arg(base + index);
+			inst.Args[narg] = mk_reg_arg(base + index);
 			narg++;
 			break;
 		}
@@ -1179,7 +1179,7 @@ ReadPrefixes:
 				index -= 4;
 				base = SPB;
 			}
-			inst.Args[narg] =mk_imm_arg( base + index);
+			inst.Args[narg] =mk_reg_arg( base + index);
 			narg++;
 			break;
 		}
@@ -1231,7 +1231,7 @@ ReadPrefixes:
 					}
 					break;
 				}
-				inst.Args[narg] =mk_imm_arg( base + index);
+				inst.Args[narg] =mk_reg_arg( base + index);
 			}
 			narg++;
 			break;
@@ -1240,7 +1240,7 @@ ReadPrefixes:
 				inst.Op = 0;
 				goto BREAK_DECODE;
 			}
-			inst.Args[narg] =mk_imm_arg( baseReg[x] + (rm&7));
+			inst.Args[narg] =mk_reg_arg( baseReg[x] + (rm&7));
 			narg++;
 			break;
 		case xArgXmm2: // register only; TODO(rsc): Handle with tag modrm_regonly tag
@@ -1248,25 +1248,25 @@ ReadPrefixes:
 				inst.Op = 0;
 				goto BREAK_DECODE;
 			}
-			inst.Args[narg] =mk_imm_arg( baseReg[x] + (rm));
+			inst.Args[narg] =mk_reg_arg( baseReg[x] + (rm));
 			narg++;
 			break;
 		case xArgRel8:
 			inst.PCRelOff = immcpos;
 			inst.PCRel = 1;
-			inst.Args[narg] =mk_imm_arg( (Rel)(immc));
+			inst.Args[narg] =mk_rel_arg( (Rel)(immc));
 			narg++;
 			break;
 		case xArgRel16:
 			inst.PCRelOff = immcpos;
 			inst.PCRel = 2;
-			inst.Args[narg] =mk_imm_arg( (Rel)(immc));
+			inst.Args[narg] =mk_rel_arg( (Rel)(immc));
 			narg++;
 			break;
 		case xArgRel32:
 			inst.PCRelOff = immcpos;
 			inst.PCRel = 4;
-			inst.Args[narg] =mk_imm_arg( (Rel)(immc));
+			inst.Args[narg] =mk_rel_arg( (Rel)(immc));
 			narg++;
 			break;
 		}
@@ -1357,7 +1357,7 @@ BREAK_DECODE:
 			{
 				Mem mem = {.Segment= ES, .Base= baseRegForBits(addrMode) + DI - AX};
 				inst.Args[0] = mk_mem_arg(mem);
-				inst.Args[1] = mk_imm_arg(DX);
+				inst.Args[1] = mk_reg_arg(DX);
 				usedAddrSize = true;
 				break;
 			}
@@ -1365,7 +1365,7 @@ BREAK_DECODE:
 		case OUTSW:
 		case OUTSD:
 			{
-				inst.Args[0] = mk_imm_arg(DX);
+				inst.Args[0] = mk_reg_arg(DX);
 				Mem mem = {.Segment=defaultSeg(segIndex,inst.Prefix), 
 							.Base= baseRegForBits(addrMode) + SI - AX};
 				inst.Args[1] = mk_mem_arg(mem); 
@@ -1406,16 +1406,16 @@ BREAK_DECODE:
 
 				switch (inst.Op) {
 				case LODSB:
-					inst.Args[0] =mk_imm_arg( AL);
+					inst.Args[0] =mk_reg_arg( AL);
 					break;
 				case LODSW:
-					inst.Args[0] = mk_imm_arg(AX);
+					inst.Args[0] = mk_reg_arg(AX);
 					break;
 				case LODSD:
-					inst.Args[0] = mk_imm_arg(EAX);
+					inst.Args[0] = mk_reg_arg(EAX);
 					break;
 				case LODSQ:
-					inst.Args[0] = mk_imm_arg(RAX);
+					inst.Args[0] = mk_reg_arg(RAX);
 					break;
 				}
 				Mem mem = {.Segment=defaultSeg(segIndex,inst.Prefix), .Base= baseRegForBits(addrMode) + SI - AX};
@@ -1432,16 +1432,16 @@ BREAK_DECODE:
 			inst.Args[0] =mk_mem_arg( mem) ;// Mem{Segment: ES, Base: baseRegForBits(addrMode) + DI - AX}
 			switch (inst.Op) {
 			case STOSB:
-				inst.Args[1] = mk_imm_arg( AL);
+				inst.Args[1] = mk_reg_arg( AL);
 				break;
 			case STOSW:
-				inst.Args[1] = mk_imm_arg(AX);
+				inst.Args[1] = mk_reg_arg(AX);
 				break;
 			case STOSD:
-				inst.Args[1] = mk_imm_arg(EAX);
+				inst.Args[1] = mk_reg_arg(EAX);
 				break;
 			case STOSQ:
-				inst.Args[1] = mk_imm_arg(RAX);
+				inst.Args[1] = mk_reg_arg(RAX);
 				break;
 			}
 			usedAddrSize = true;
@@ -1457,16 +1457,16 @@ BREAK_DECODE:
 			inst.Args[1] = mk_mem_arg(mem);//Mem{Segment: ES, Base: baseRegForBits(addrMode) + DI - AX}
 			switch (inst.Op) {
 			case SCASB:
-				inst.Args[0] = mk_imm_arg(AL);
+				inst.Args[0] = mk_reg_arg(AL);
 				break;
 			case SCASW:
-				inst.Args[0] =mk_imm_arg( AX);
+				inst.Args[0] =mk_reg_arg( AX);
 				break;
 			case SCASD:
-				inst.Args[0] = mk_imm_arg(EAX);
+				inst.Args[0] = mk_reg_arg(EAX);
 				break;
 			case SCASQ:
-				inst.Args[0] = mk_imm_arg( RAX);
+				inst.Args[0] = mk_reg_arg( RAX);
 				break;
 			}
 			usedAddrSize = true;

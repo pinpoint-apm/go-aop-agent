@@ -1,6 +1,9 @@
 
 #include "Inst.h"
 #include <stdio.h>
+#include <string.h>
+
+#define SUFFIX_STR ", "
 
 void inst_str(Inst* inst,char* buf,int buf_size)
 {
@@ -35,20 +38,23 @@ void inst_str(Inst* inst,char* buf,int buf_size)
     }
 
     pbuf+=done;
-    buf_size+=done;
+    buf_size -=done;
 	//parse args
 	for (i = 0; i < ARGS_SIZE ; i++) {
-		if( IS_NIL(inst->Args[i] )){
+		if( IS_NIL(inst->Args[i])){
 			break;
 		}
         char argsBuf[128]={0};
 		args_str(&inst->Args[i],argsBuf,sizeof(argsBuf));
-        done = snprintf(pbuf,buf_size,"%s,",argsBuf);
+        done = snprintf(pbuf,buf_size,"%s"SUFFIX_STR,argsBuf);
 		
         if(done>= buf_size || buf_size <=0 ){
             return;
         }
         pbuf+=done;
-        buf_size+=done;
+        buf_size -= done;
 	}
+
+	//rollback suffix_str
+	*(pbuf - strlen(SUFFIX_STR))= '\0';
 }
