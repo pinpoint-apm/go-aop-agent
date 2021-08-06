@@ -1,4 +1,4 @@
-#include "goX86.h"
+#include "goX86asm.h"
 #include "table.h"
 #include "Args.h"
 #include "Inst.h"

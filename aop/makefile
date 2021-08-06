@@ -17,3 +17,5 @@ test: $(OBJECTS)
 clean:
 	-rm -f $(OBJECTS)
 	-rm -f test
+	-rm -f *.gcno
+	-rm -f *.gcda
