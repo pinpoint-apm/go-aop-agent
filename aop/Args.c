@@ -1,9 +1,10 @@
 #include "Args.h"
 #include <stdio.h>
-
+#include <assert.h>
 ArgsT mk_imm_arg(Imm x){
 	ArgsT args = {.type =E_IMM};
 	args.value.imm=x;
+	// assert(x!=1);
 	return args;
 }
 
@@ -112,3 +113,25 @@ void args_str(ArgsT* args,char* buf ,int size)
 		break;
 	}
 }
+
+
+ArgsT fixedArg[113] ={
+	[xArg1]=    {.type=E_IMM, .value.imm=1},
+	[xArg3]=    {.type=E_IMM, .value.imm=3},
+	[xArgAL]=   {.type=E_REG, .value.reg = AL},
+	[xArgAX]=   {.type=E_REG, .value.reg =AX},
+	[xArgDX]=   {.type=E_REG, .value.reg =DX},
+	[xArgEAX]=  {.type=E_REG, .value.reg =EAX},
+	[xArgEDX]=  {.type=E_REG, .value.reg =EDX},
+	[xArgRAX]=  {.type=E_REG, .value.reg =RAX},
+	[xArgRDX]=  {.type=E_REG, .value.reg =RDX},
+	[xArgCL]=   {.type=E_REG, .value.reg =CL},
+	[xArgCS]=   {.type=E_REG, .value.reg =CS},
+	[xArgDS]=   {.type=E_REG, .value.reg =DS},
+	[xArgES]=   {.type=E_REG, .value.reg =ES},
+	[xArgFS]=   {.type=E_REG, .value.reg =FS},
+	[xArgGS]=   {.type=E_REG, .value.reg =GS},
+	[xArgSS]=   {.type=E_REG, .value.reg =SS},
+	[xArgST]=   {.type=E_REG, .value.reg =F0},
+	[xArgXMM0]= {.type=E_REG, .value.reg =X0},
+};

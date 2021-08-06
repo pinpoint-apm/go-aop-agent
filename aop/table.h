@@ -1,10 +1,8 @@
 #pragma once
-
 #include <stdint.h>
 
 #ifndef uint16
 #define uint16 uint16_t
-// typedef uint16_t uint16;
 #endif
 
 typedef uint16_t Prefix;
@@ -1010,8 +1008,6 @@ typedef struct{
 	int64_t Disp;
 }Mem;
 
-
-extern Imm fixedArg[113];
 extern Mem addr16[16];
 extern int8_t memBytes[123];
 extern Reg baseReg[127];

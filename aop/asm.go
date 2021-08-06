@@ -48,15 +48,15 @@ func Decode(code []byte, mode int) (goInst x86asm.Inst, err error) {
 			goInst.Args[i] = nil
 		case C.E_REG:
 			c_reg := ((*C.Reg)(unsafe.Pointer(&inst.Args[i].value)))
-			reg := x86asm.Reg(*c_reg)
+			var reg x86asm.Reg = x86asm.Reg(*c_reg)
 			goInst.Args[i] = reg
 		case C.E_IMM:
 			c_imm := ((*C.Imm)(unsafe.Pointer(&inst.Args[i].value)))
-			imm := x86asm.Imm(*c_imm)
+			var imm x86asm.Imm = x86asm.Imm(*c_imm)
 			goInst.Args[i] = imm
 		case C.E_REL:
 			c_rel := ((*C.Rel)(unsafe.Pointer(&inst.Args[i].value)))
-			rel := x86asm.Rel(*c_rel)
+			var rel x86asm.Rel = x86asm.Rel(*c_rel)
 			goInst.Args[i] = rel
 		}
 	}

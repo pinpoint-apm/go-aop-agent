@@ -68,7 +68,7 @@ func TestDecode(t *testing.T) {
 			}
 		}
 		if out != asm || inst.Len != size {
-			t.Errorf("Decode(%s) [%s] = %s, %d, want %s, %d", f[0], syntax, out, inst.Len, asm, size)
+			t.Errorf("Decode(%s) [%s] = %s, %d, want %s, %d | %s", f[0], syntax, out, inst.Len, asm, size, inst)
 		}
 	}
 }

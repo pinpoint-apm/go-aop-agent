@@ -993,7 +993,7 @@ ReadPrefixes:
 		case	xArgSS:
 		case	xArgST:
 		case	xArgXMM0:
-			inst.Args[narg] =  mk_imm_arg(fixedArg[x]);
+			inst.Args[narg] =  fixedArg[x];
 			narg++;
 			break;
 		case xArgImm8:

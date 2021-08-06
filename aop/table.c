@@ -8687,26 +8687,6 @@ uint16 decoder[] = {
 };
 
 
-Imm fixedArg[113] ={
-	[xArg1]=    (1),
-	[xArg3]=    (3),
-	[xArgAL]=   AL,
-	[xArgAX]=   AX,
-	[xArgDX]=   DX,
-	[xArgEAX]=  EAX,
-	[xArgEDX]=  EDX,
-	[xArgRAX]=  RAX,
-	[xArgRDX]=  RDX,
-	[xArgCL]=   CL,
-	[xArgCS]=   CS,
-	[xArgDS]=   DS,
-	[xArgES]=   ES,
-	[xArgFS]=   FS,
-	[xArgGS]=   GS,
-	[xArgSS]=   SS,
-	[xArgST]=   F0,
-	[xArgXMM0]= X0,
-};
 
 Mem addr16[16]={
 	{.Base= BX, .Scale= 1, .Index= SI},

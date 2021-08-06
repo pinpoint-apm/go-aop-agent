@@ -35,3 +35,4 @@ Rel* get_rel_arg(ArgsT* args);
 #define IS_REL(x) (x.type == E_REL)
 
 void args_str(ArgsT*,char* buf ,int size);
+extern ArgsT fixedArg[113];
