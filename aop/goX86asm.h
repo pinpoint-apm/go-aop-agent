@@ -15,7 +15,16 @@ extern "C"
 // unsigned int   m_to_asm( void *code, Inst *ld);
 // unsigned long  SizeOfProc( void *Proc );
 // void*          ResolveJmp( void *Proc );
-uint32_t decode(Reg *src,int len, Inst *ld, int mode,bool gnuCompat);
+typedef enum {
+    E_UNRECOGNIZED = -1024,
+    E_TRUNCATED,
+    E_INVALID_MODE,
+    E_INTERNAL,
+    E_PARA_INVALID,
+    E_OK=0,
+}E_RET_TYPE;
+
+E_RET_TYPE decode(Reg *src,int len, Inst *ld, int mode,bool gnuCompat);
 #ifdef __cplusplus
 }
 #endif

@@ -2,6 +2,9 @@
 #include "table.h"
 #include "Args.h"
 #include "Inst.h"
+#ifdef UTEST
+#include <assert.h>
+#endif
 
 #ifndef NTRACE
 #define LOG_TRACE(fmt,args...)  fprintf(stderr,"[%s:%d] %s: " fmt "\n",__FILE__,__LINE__,__FUNCTION__,##args)
@@ -10,7 +13,7 @@
 #endif
 
 Inst instPrefix(Reg b,int mode );
-Inst truncated(const Reg* b,int len,int mode );
+Inst truncated(const Reg* b,int len,int mode, E_RET_TYPE * ret);
 
 Reg baseRegForBits(int bits);
 
@@ -44,12 +47,14 @@ Reg baseRegForBits(int  bits ) {
 	return 0;
 }
 
-Inst truncated(const Reg* b,int len,int mode )
+Inst truncated(const Reg* b,int len,int mode,E_RET_TYPE * ret )
 {
 	if(len == 0){
 		Inst inst = {0};
+		*ret = E_TRUNCATED;
 		return inst;
 	}
+	*ret = E_OK;
 	return instPrefix(b[0],mode);
 }
 
@@ -113,10 +118,10 @@ Inst instPrefix(Reg b,int mode )
 }
 
 
-uint32_t decode(Reg *src,int len, Inst *ld, int mode,bool gnuCompat)
+E_RET_TYPE decode(Reg *src,int len, Inst *ld, int mode,bool gnuCompat)
 {
 	if(src == NULL || ld == NULL){
-		return -1;
+		return E_PARA_INVALID;
 	}
 
 	switch(mode)
@@ -128,7 +133,7 @@ uint32_t decode(Reg *src,int len, Inst *ld, int mode,bool gnuCompat)
 		// ok
 		// TODO(rsc): 64-bit mode not tested, probably not working.
 	default:
-		return -1;
+		return E_PARA_INVALID;
 	}
 
 	// Maximum instruction size is 15 bytes.
@@ -184,7 +189,7 @@ uint32_t decode(Reg *src,int len, Inst *ld, int mode,bool gnuCompat)
 	int	opshift = 0;
 	Inst	inst  ={0};  
 	int 	narg   ={0}; // number of arguments written to inst
-	
+	E_RET_TYPE ret = E_OK;
 
 	if (mode == 64) {
 		dataMode = 32;
@@ -327,7 +332,7 @@ uint32_t decode(Reg *src,int len, Inst *ld, int mode,bool gnuCompat)
 
 		if (pos >= PREFIX_SIZE ) {
 			*ld = instPrefix(src[0],mode);
-			return 0; // instPrefix(src[0]); // too long
+			return E_OK; // instPrefix(src[0]); // too long
 		}
 		inst.Prefix[pos] = p;
 	}
@@ -341,7 +346,7 @@ ReadPrefixes:
 		rexIndex = pos;
 		if (pos >= PREFIX_SIZE ) {
 			*ld = instPrefix(src[0],mode);
-			return 0;
+			return E_OK;
 		}
 		inst.Prefix[pos] = rex;
 		pos++;
@@ -385,14 +390,17 @@ ReadPrefixes:
 			if (haveModrm) {
 				ld->Len = pos;
 				//todo errors.New("internal error")print
-				return -1;
+				Inst inst ={.Len=pos};
+				*ld = inst;
+				ret = E_INTERNAL;
+				return ret;
 				// return Inst{Len: pos}, errInternal
 			}
 
 			haveModrm = true;
 			if (pos >= len) {
-				*ld = truncated(src, len,mode);
-				return 0;
+				*ld = truncated(src, len,mode,&ret);
+				return ret;
 			}
 
 			modrm = src[pos];
@@ -420,8 +428,8 @@ ReadPrefixes:
 					// Consume disp16 if present.
 					if ( (mod == 0 && rm == 6) || mod == 2 ){
 						if(pos+2 > len ){
-							*ld = truncated(src, len,mode);
-							return 0;
+							*ld = truncated(src, len,mode,&ret);
+							return ret;
 						}
 						mem.Disp = toLittleEndianU16(&src[pos]);
 						pos += 2;
@@ -430,8 +438,8 @@ ReadPrefixes:
 					// Consume disp8 if present.
 					if (mod == 1 ){
 						if (pos >= len ){
-							*ld = truncated(src, len,mode);
-							return 0;
+							*ld = truncated(src, len,mode,&ret);
+							return ret;
 						}
 						mem.Disp = src[pos];
 						pos++;
@@ -445,8 +453,8 @@ ReadPrefixes:
 				if (rm == 4 && mod != 3) {
 					haveSIB = true;
 					if(  pos >= len) {
-						*ld = truncated(src, len,mode);
-						return 0;
+						*ld = truncated(src, len,mode,&ret);
+						return ret;
 					}
 					sib = src[pos];
 					pos++;
@@ -493,8 +501,8 @@ ReadPrefixes:
 				// Consume disp32 if present.
 				if ( (mod == 0 && ((rm&7) == 5 || (haveSIB && (base&7) == 5))) || mod == 2 ){
 					if (pos+4 > len ){
-						*ld = truncated(src, len,mode);
-						return 0;
+						*ld = truncated(src, len,mode,&ret);
+						return ret;
 					}
 					dispoff = pos;
 					displen = 4;
@@ -505,8 +513,8 @@ ReadPrefixes:
 				// Consume disp8 if present.
 				if( mod == 1 ){
 					if (pos >= len ){
-						*ld = truncated(src, len,mode);
-						return 0;
+						*ld = truncated(src, len,mode,&ret);
+						return ret;
 					}
 					dispoff = pos;
 					displen = 1;
@@ -539,7 +547,8 @@ ReadPrefixes:
 			//  Inst{Len: pos}, errInternal
 			Inst inst = {.Len= pos};
 			*ld =inst;
-			return -1;
+			ret = E_INTERNAL;
+			return ret;
 		}
 		case xFail:
 			inst.Op = 0;
@@ -556,8 +565,8 @@ ReadPrefixes:
 		case xCondByte:
 		{
 			if (pos >= len ){
-				*ld = truncated(src,len, mode);
-				return 0;
+				*ld = truncated(src,len, mode,&ret);
+				return ret;
 			}
 			Reg b = src[pos];
 			int n = decoder[pc],i = 0;
@@ -603,7 +612,7 @@ ReadPrefixes:
 				if (!haveModrm) {
 					if (pos >= len) {
 						*ld = instPrefix(src[0], mode); // too long
-						return 0;
+						return ret;
 					}
 					mem = src[pos]>>6 != 3;
 				}
@@ -876,40 +885,40 @@ ReadPrefixes:
 			break;
 		case xReadIb:
 			if (pos >= len) {
-				*ld = truncated(src, len,mode);
-				return 0;
+				*ld = truncated(src, len,mode,&ret);
+				return ret;
 			}
 			imm8 = (src[pos]);
 			pos++;
 			break;
 		case xReadIw:
 			if (pos+2 > len) {
-					*ld = truncated(src, len,mode);
-				return 0;
+				*ld = truncated(src, len,mode,&ret);
+				return ret;
 			}
 			imm = toLittleEndianU16(&src[pos]);
 			pos += 2 ;
 			break;
 		case xReadId:
 			if (pos+4 > len) {
-					*ld = truncated(src, len,mode);
-				return 0;
+				*ld = truncated(src, len,mode,&ret);
+				return ret;
 			}
 			imm = toLittleEndianU32(&src[pos]);
 			pos += 4;
 			break;
 		case xReadIo:
 			if (pos+8 > len ){
-					*ld = truncated(src, len,mode);
-				return 0;
+				*ld = truncated(src, len,mode,&ret);
+				return ret;
 			}
 			imm = toLittleEndianU64(&src[pos]);
 			pos += 8;
 			break;
 		case xReadCb:
 			if (pos >= len) {
-				*ld = truncated(src, len,mode);
-				return 0;
+				*ld = truncated(src, len,mode,&ret);
+				return ret;
 			}
 			immcpos = pos;
 			immc = src[pos];
@@ -917,8 +926,8 @@ ReadPrefixes:
 			break;
 		case xReadCw:
 			if (pos+2 > len){
-				*ld = truncated(src, len,mode);
-				return 0;
+				*ld = truncated(src, len,mode,&ret);
+				return ret;
 			}
 			immcpos = pos;
 			immc = toLittleEndianU16(&src[pos]);
@@ -928,22 +937,22 @@ ReadPrefixes:
 			immcpos = pos;
 			if (addrMode == 16) {
 				if (pos+2 > len ){
-					*ld = truncated(src, len,mode);
-					return 0;
+					*ld = truncated(src, len,mode,&ret);
+					return ret;
 				}
 				immc = toLittleEndianU16(&src[pos]);
 				pos += 2;
 			} else if (addrMode == 32) {
 				if (pos+4 > len ){
-					*ld = truncated(src, len,mode);
-					return 0;
+					*ld = truncated(src, len,mode,&ret);
+					return ret;
 				}
 				immc = toLittleEndianU32(&src[pos]);
 				pos += 4;
 			} else {
 				if (pos+8 > len ){
-					*ld = truncated(src, len,mode);
-					return 0;
+					*ld = truncated(src, len,mode,&ret);
+					return ret;
 				}
 				immc = toLittleEndianU64(&src[pos]);
 				pos += 8;
@@ -952,8 +961,8 @@ ReadPrefixes:
 		case xReadCd:
 			immcpos = pos;
 			if(pos+4 > len){
-				*ld = truncated(src, len,mode);
-				return 0;
+				*ld = truncated(src, len,mode,&ret);
+				return ret;
 			}
 			immc = toLittleEndianU32(&src[pos]);
 			pos += 4;
@@ -961,8 +970,8 @@ ReadPrefixes:
 		case xReadCp:
 			immcpos = pos;
 			if (pos+6 > len) {
-				*ld = truncated(src, len,mode);
-				return 0;
+				*ld = truncated(src, len,mode,&ret);
+				return ret;
 			}
 			int64_t w = toLittleEndianU32(&src[pos]);
 			int64_t w2 =toLittleEndianU16(&src[pos+4]);
@@ -1283,12 +1292,12 @@ BREAK_DECODE:
 		if (nprefix > 0) {
 			//todo invalid instruction
 			*ld = instPrefix(src[0], mode); // invalid instruction
-			return -1;
+			return ret;
 		}
 		Inst inst = {.Len= pos};
 		*ld = inst;
 		//todo ErrUnrecognized
-		return -1; //ErrUnrecognized
+		return E_UNRECOGNIZED; //ErrUnrecognized
 	}
 
 	// Matched! Hooray!
@@ -1661,5 +1670,23 @@ BREAK_DECODE:
 	inst.Mode = mode;
 	inst.Len = pos;
 	*ld = inst;
-	return 0;
+	return ret;
 }
+
+#ifdef UTEST
+
+int main(int argc,const char* argv[]){
+    (void)argc;
+    (void)argv;
+
+    Inst inst = {0};
+    // Reg reg[]={0x48, 0x8b,0x05,0x02,0x74,0x21,0x00};
+	Reg reg[]={0x0f,0x01,0xf8};
+    int ret = decode(reg,sizeof(reg),&inst,64,false);
+    // assert(ret == 0);
+    char buf[128]={0};
+    inst_str(&inst,buf,sizeof(buf));
+    printf("%d,%d\n",ret,inst.Len);
+    return 0;
+}
+#endif

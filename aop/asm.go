@@ -4,6 +4,7 @@ package aop
 //#include "goX86asm.h"
 import "C"
 import (
+	"errors"
 	"unsafe"
 
 	"golang.org/x/arch/x86/x86asm"
@@ -12,9 +13,7 @@ import (
 func Decode(code []byte, mode int) (goInst x86asm.Inst, err error) {
 	inst := C.Inst{}
 	codeLen := int32(len(code))
-	C.decode((*C.uint8_t)(unsafe.Pointer(&code[0])), C.int(codeLen), &inst, C.int(mode), C.uchar(0))
-	err = nil
-	// fmt.Println(inst)
+	ret := C.decode((*C.uint8_t)(unsafe.Pointer(&code[0])), C.int(codeLen), &inst, C.int(mode), C.uchar(0))
 	goInst = x86asm.Inst{
 		Op:       x86asm.Op(inst.Op),
 		Opcode:   uint32(inst.Opcode),
@@ -26,7 +25,7 @@ func Decode(code []byte, mode int) (goInst x86asm.Inst, err error) {
 		PCRel:    int(inst.PCRel),
 		PCRelOff: int(inst.PCRelOff),
 	}
-
+	// transfer c_inst into goInst
 	for i := 0; i < 14; i++ {
 		goInst.Prefix[i] = x86asm.Prefix(inst.Prefix[i])
 	}
@@ -60,6 +59,19 @@ func Decode(code []byte, mode int) (goInst x86asm.Inst, err error) {
 			goInst.Args[i] = rel
 		}
 	}
-	// fmt.Println(goInst)
+	//  transfer ret into err
+	if ret != C.E_OK {
+		switch ret {
+		case C.E_UNRECOGNIZED:
+			err = errors.New("unrecognized instruction")
+		case C.E_TRUNCATED:
+			err = errors.New("truncated instruction")
+		case C.E_INVALID_MODE:
+			err = errors.New("invalid x86 mode in Decode")
+		case C.E_INTERNAL:
+			err = errors.New("internal error")
+		}
+		return
+	}
 	return
 }
