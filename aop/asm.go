@@ -11,6 +11,11 @@ import (
 )
 
 func Decode(code []byte, mode int) (goInst x86asm.Inst, err error) {
+	if len(code) == 0 {
+		err = errors.New(" empty code")
+		return
+	}
+
 	inst := C.Inst{}
 	codeLen := int32(len(code))
 	ret := C.decode((*C.uint8_t)(unsafe.Pointer(&code[0])), C.int(codeLen), &inst, C.int(mode), C.uchar(0))

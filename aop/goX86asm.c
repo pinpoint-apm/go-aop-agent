@@ -18,15 +18,15 @@ Inst truncated(const Reg* b,int len,int mode, E_RET_TYPE * ret);
 Reg baseRegForBits(int bits);
 
 uint16_t toLittleEndianU16(const uint8_t* x) {
-	return ((uint16_t)x[1] << 8) | x[0];
+	return ((uint16_t)x[1] << 8) | (uint16_t)x[0];
 }
 
 uint32_t toLittleEndianU32(const uint8_t* x) {
-	return (uint32_t)x[3]<<24 | (uint32_t)x[2]<<16 | (uint32_t)x[1] << 8 | x[0];
+	return (uint32_t)x[3]<<24 | (uint32_t)x[2]<<16 | (uint32_t)x[1] << 8 | (uint32_t)x[0];
 }
 
 uint64_t toLittleEndianU64(const uint8_t* x) {
-	return (uint64_t)x[7]<< 56 |(uint64_t)x[6]<<48 | (uint64_t)x[5]<<40 | (uint64_t)x[4]<<32 |(uint64_t)x[3]<<24 | (uint64_t)x[2]<<16 | (uint64_t)x[1] << 8|| x[0];
+	return (uint64_t)x[7]<< 56 |(uint64_t)x[6]<<48 | (uint64_t)x[5]<<40 | (uint64_t)x[4]<<32 |(uint64_t)x[3]<<24 | (uint64_t)x[2]<<16 | (uint64_t)x[1] << 8| (uint64_t)x[0];
 }
 
 bool IsREX( Prefix prefix ){
@@ -120,7 +120,8 @@ Inst instPrefix(Reg b,int mode )
 
 E_RET_TYPE decode(Reg *src,int len, Inst *ld, int mode,bool gnuCompat)
 {
-	if(src == NULL || ld == NULL){
+	if(src == NULL || ld == NULL || len <= 0){
+		LOG_TRACE("src:%p ld：%p len:%d",src,ld,len);
 		return E_PARA_INVALID;
 	}
 
@@ -1309,7 +1310,7 @@ BREAK_DECODE:
 	// F3 90 decodes as REP XCHG EAX, EAX but is PAUSE.
 	// It's all too special to handle in the decoding tables, at least for now.
 	if (inst.Op == XCHG && inst.Opcode>>24 == 0x90 ){
-		Imm* value = get_imm_arg(&inst.Args[0]);
+		Reg* value = get_reg_arg(&inst.Args[0]);
 
 		if ( (value !=NULL) &&( *value == RAX || *value == EAX || *value == AX )){
 			inst.Op = NOP;
@@ -1679,14 +1680,31 @@ int main(int argc,const char* argv[]){
     (void)argc;
     (void)argv;
 
-    Inst inst = {0};
-    // Reg reg[]={0x48, 0x8b,0x05,0x02,0x74,0x21,0x00};
-	Reg reg[]={0x0f,0x01,0xf8};
-    int ret = decode(reg,sizeof(reg),&inst,64,false);
-    // assert(ret == 0);
-    char buf[128]={0};
-    inst_str(&inst,buf,sizeof(buf));
-    printf("%d,%d\n",ret,inst.Len);
+
+	typedef struct 
+	{
+		int len;
+		Reg reg[13];
+	}Regs;
+
+    Regs regs[] = {
+		{7,	{0x48, 0x8b,0x05,0x02,0x74,0x21,0x00}},
+		{3,{0x0f,0x01,0xf8}},
+		{2,{0x66,0x90}},
+		{4,{0x0f,0xba,0x30,0x11}},
+		{10,{0x26,0xa0,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88}},
+		{2,{0x66,0x90}},
+		{1,{0xc5}},
+		{1,{0xc4}},
+	};
+	for(uint32_t i=0 ; i<sizeof(regs)/sizeof(Regs) ; i++) {
+		Inst inst = {0};
+		int ret = decode(regs[i].reg,regs[i].len,&inst,64,false);
+		char buf[128]={0};
+		inst_str(&inst,buf,sizeof(buf));
+		printf("%d,%d,%s \n",ret,inst.Len,buf);
+	}
+
     return 0;
 }
 #endif

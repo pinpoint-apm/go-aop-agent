@@ -11,3 +11,8 @@ test.go
 *.txt
 *.test
 .vscode
+.idea
+*.gcda
+*.gcno
+*.gcov
+utest
