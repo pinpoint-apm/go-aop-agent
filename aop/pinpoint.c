@@ -14,8 +14,12 @@
  * limitations under the License.
  */
 #include "pinpoint.h"
-#include "LDasm.h"
+#include "goX86asm.h"
 
+
+static const BYTE NOP_1= (0xfa);
+static const BYTE NOP_2[]= {0xd9,0xd0};
+static const BYTE NOP_3[]= {0x0f,0x1f,0x00};
 
 typedef struct page_mem_chunk_s{
     uint16_t freeOffset;
@@ -173,41 +177,41 @@ void* get_neighbor_mem(void* where, int size){
  */
 void* get_neighbor_page(void* where)
 {
-    LOG_TRACE("start get neighbort page:%p",where);
+    // LOG_TRACE("start get neighbort page:%p",where);
     void* target  = get_page_boundary(where);
-    LOG_TRACE("where:%p target:%p",where,target);
+    // LOG_TRACE("where:%p target:%p",where,target);
     void* lo = get_2gb_low(target);
     void* hi = get_2gb_above(target);
-    LOG_TRACE("lo:%p hi:%p",lo,hi);
+    // LOG_TRACE("lo:%p hi:%p",lo,hi);
     void* try = NULL;
     // Try looking 1GB below or lower.
     if( try == NULL && target > (void*)0x40000000){
-        LOG_TRACE("try in > -1GB");
+        // LOG_TRACE("try in > -1GB");
         try = try_get_page_from_addr_hi(lo,target - 0x40000000);
     }
 
     if( try == NULL && target < (void*)0xffffffff40000000){
-        LOG_TRACE("try in > +1GB");
+        // LOG_TRACE("try in > +1GB");
         try = try_get_page_from_addr_lo(target +0x40000000,hi);
     }
 
     if( try == NULL && target > (void*)0x40000000){
-         LOG_TRACE("try in <-1GB");
+        //  LOG_TRACE("try in <-1GB");
         try = try_get_page_from_addr_hi( target - 0x40000000 ,target);
     }
 
     if( try == NULL && target < (void*)0xffffffff40000000){
-        LOG_TRACE("try in <+1GB");
+        // LOG_TRACE("try in <+1GB");
         try = try_get_page_from_addr_hi( target ,target + 0x40000000);
     }
 
     if(try == NULL){
-        LOG_TRACE("try in [-2GB,target)");
+        // LOG_TRACE("try in [-2GB,target)");
         try = try_get_page_from_addr_hi(lo ,target);
     }
     
     if(try == NULL){
-        LOG_TRACE("try in [target,+2GB)");
+        // LOG_TRACE("try in [target,+2GB)");
         try = try_get_page_from_addr_lo(target ,hi);
     }
 
@@ -229,98 +233,146 @@ void unhook(void* ptr)
     set_mm_area_opt(trampoline->target,trampoline->fromInstBackUp.instBackupSize,PROT_READ|PROT_EXEC);
 
     // restore trampoline_func
-    LOG_TRACE("restore the trampoline_func inst to %p",trampoline->trampoline_func);
-    set_mm_area_opt(trampoline->trampoline_func,trampoline->trampolineBackUpSize,PROT_READ|PROT_WRITE|PROT_EXEC);
-    memcpy(trampoline->trampoline_func,trampoline->trampolineFuncInstBackUp,trampoline->trampolineBackUpSize);
-    set_mm_area_opt(trampoline->target,trampoline->trampolineBackUpSize,PROT_READ|PROT_EXEC);
+    LOG_TRACE("restore the trampoline_func inst to %p",trampoline->trampolineFunc.pTrampFunc);
+    set_mm_area_opt(trampoline->trampolineFunc.pTrampFunc,trampoline->trampolineFunc.bakInstArLen,PROT_READ|PROT_WRITE|PROT_EXEC);
+    memcpy(trampoline->trampolineFunc.pTrampFunc,trampoline->trampolineFunc.bakInstAr,trampoline->trampolineFunc.bakInstArLen);
+    set_mm_area_opt(trampoline->target,trampoline->trampolineFunc.bakInstArLen,PROT_READ|PROT_EXEC);
 
-    // munmap trampoline01*
+    // munmap forward*
     // int page = getpagesize();
-    // munmap(trampoline->trampoline01,page);
+    // munmap(trampoline->forward,page);
     // munmap(trampoline->trampoline02,page);
-    trampoline->trampoline01 = NULL;
-    trampoline->trampoline02 = NULL;
+    trampoline->forward = NULL;
+    trampoline->back = NULL;
     // free trampoline
     free(ptr);
 }
 
-void* insert_direct_jmp_inst(void*src,void* target)
+void place_safe_nop_inst(BYTE* p,int size)
 {
+    if(size <= 0){
+        return ;
+    }else if(size == 1){
+        *p = NOP_1;
+    }else if(size == 3){
+        *(p) = NOP_3[0];
+        *(p+1) = NOP_3[1];
+        *(p+2) = NOP_3[2];
+    }else if(size%2 == 0){
+        for(int i =0;i<size;)
+        {
+            *(p+i) = NOP_2[0];
+            *(p+i+1) = NOP_2[1];
+            i+=2;
+        }
+    }else{
+        // size -3 : must goto `size%2 == 0`
+        place_safe_nop_inst(p,size-3);
+        p += (size-3);
+        place_safe_nop_inst(p,3);
+    }
+}
+
+int32_t place_direct_jmp_inst(void*src,void* target,uint32_t placedSize)
+{
+    assert( placedSize >= JMP_INST_SIZE );
     set_mm_area_opt(src,JMP_INST_SIZE,PROT_READ|PROT_WRITE|PROT_EXEC);
-    INST* inst= src;
+    #ifdef DTRACE
+    { 
+        BYTE* raw = src;
+        LOG_TRACE("before:%p %X %X %X %X %X",src,raw[0],raw[1],raw[2],raw[3],raw[4]);
+    }
+    #endif
+    BYTE* inst= src;
     *inst++ =  0xE9;
     *(int32_t*)inst++ = (int32_t)(target - src  - 5);
+    place_safe_nop_inst(inst+JMP_INST_SIZE,placedSize - JMP_INST_SIZE);
     set_mm_area_opt(src,JMP_INST_SIZE,PROT_READ|PROT_EXEC);
     #ifdef DTRACE
     {
-        INST* raw = src;
-        LOG_TRACE("src:%p -> target:%p %X -> %X %X %X %X",src,target,raw[0],raw[1],raw[2],raw[3],raw[4]);
+        BYTE* raw = src;
+        LOG_TRACE("[directly jmp] after:%p target:%p %X %X %X %X %X",src,target,raw[0],raw[1],raw[2],raw[3],raw[4]);
     }
     #endif 
-    return inst;
+    return JMP_INST_SIZE;
 }
 
-void* insert_indirect_jmp_inst(void*src,void* target)
+int32_t place_indirect_jmp_inst(void*src,void* target,uint32_t placedSize)
 {
-    set_mm_area_opt(src,6,PROT_READ|PROT_WRITE|PROT_EXEC);
-    INST* inst= src;
-    *inst++ =  0xFF;
-    *inst++ =  0x25;
-    *(int32_t*)inst++= (int32_t)(target - (src + 6));  
-    set_mm_area_opt(src,6,PROT_READ|PROT_EXEC);
-    #ifdef DTRACE
-    {
-        INST* raw = src;
-        LOG_TRACE("src:%p -> target:%p %X %X -> %X %X %X %X",src,target,raw[0],raw[1],raw[2],raw[3],raw[4],raw[5]);
+    assert(placedSize>=LONG_JMP_INST_SIZE);
+    set_mm_area_opt(src,LONG_JMP_INST_SIZE,PROT_READ|PROT_WRITE|PROT_EXEC);
+     #ifdef DTRACE
+    { 
+        BYTE* raw = src;
+        LOG_TRACE("before:%p %X %X %X %X %X %X",src,raw[0],raw[1],raw[2],raw[3],raw[4],raw[5]);
     }
     #endif
-    return inst;
+    BYTE* inst= src;
+    *inst++ =  0xFF;
+    *inst++ =  0x25;
+    *(int32_t*)inst++= (int32_t)(target - (src + 6));
+    place_safe_nop_inst(inst+LONG_JMP_INST_SIZE,placedSize - LONG_JMP_INST_SIZE);
+    set_mm_area_opt(src,LONG_JMP_INST_SIZE,PROT_READ|PROT_EXEC);
+    #ifdef DTRACE
+    {
+        BYTE* raw = src;
+        LOG_TRACE("[indirectly jmp] src:%p target:%p %X %X %X %X %X %X",src,target,raw[0],raw[1],raw[2],raw[3],raw[4],raw[5]);
+    }
+    #endif
+    return LONG_JMP_INST_SIZE;
 }
 
 
-inline int32_t calc_inst_size(void* from)
+inline int32_t calc_inst_size(Reg* from,int len)
 {
-    ldasm_data _data;
-    return ldasm(from,&_data);
+    Inst inst = {0};
+    decode(from,len,&inst,64,false);
+    return inst.Len;
 }
 
-int32_t calcRelativeOffset(INST* inst,int32_t size,INST* instBaseAddr){
+int32_t calcRelativeOffset(BYTE* reg,int32_t size,BYTE* instBaseAddr){
 
-    INST* cur = inst;
-    ldasm_data ld = { 0 };
+    Reg* cur = reg;
+    
 
     // copy from https://github.com/DarthTon/Blackbone/pull/420
     const int64_t diffMinVals[] = {0ll, -128ll, -32768ll, -8388608ll, -2147483648ll, -549755813888ll, -140737488355328ll, -36028797018963968ll, -9223372036854775807ll};
     const int64_t diffMaxVals[] = {0ll, 127ll, 32767ll, 8388607ll, 2147483647ll, 549755813887ll, 140737488355327ll, 36028797018963967ll, 9223372036854775807ll};
 
     do{
-        uint32_t len = ldasm( cur, &ld );
-        if (ld.flags & F_INVALID
-             || (len == 1 && (cur[ld.opcd_offset] == 0xCC || cur[ld.opcd_offset] == 0xC3))
-             || (len == 3 && cur[ld.opcd_offset] == 0xC2)) // 0xCC -> INT 0xC3/0xC2-> RETN
+        Inst inst = {0};
+        E_RET_TYPE ret = decode(cur,size,&inst,64,false);
+        if (ret != E_OK 
+             || (inst.Len == 1 && (inst.Op == INT || inst.Op == RET))
+             || (inst.Len == 3 && inst.Op == 0xC2)) // 0xCC -> INT 0xC3/0xC2-> RETN
         {
             break;
         }
 
-        if (ld.flags & F_RELATIVE)
+        if (inst.PCRel != 0)
         {
+            assert(inst.PCRelOff != 0);
             // NOTE: how about big-endian
-	        int32_t diff = 0;
-            const uintptr_t ofst = (ld.disp_offset != 0 ? ld.disp_offset : ld.imm_offset);
-            const uintptr_t sz = ld.disp_size != 0 ? ld.disp_size : ld.imm_size;
+	        int32_t relative = 0;
 
-            memcpy( &diff, cur + ofst, sz );
+            const uintptr_t ofst = inst.PCRelOff;
+            const uintptr_t sz = inst.PCRel;
 
-            int64_t newDiff = ((int64_t) diff) + (instBaseAddr -inst);
+            memcpy( &relative, cur + ofst, sz );
 
-            if (newDiff < diffMinVals[sz]  ||  newDiff > diffMaxVals[sz]) {
-                LOG_TRACE("invalid offset. newDiff:%ld inst offset:%ld diff size:%ld",newDiff,ofst,sz);
+            int64_t newRel = instBaseAddr + (int64_t)relative - reg ; //relative + (instBaseAddr - reg);
+
+            if (newRel < diffMinVals[sz]  ||  newRel > diffMaxVals[sz]) {
+                LOG_ETRACE("invalid offset. newDiff:%ld inst offset:%ld diff size:%ld",newRel,ofst,sz);
             	return -1;
             }
-            memcpy(cur + ofst, &newDiff, sz);
+
+            LOG_TRACE("origin relative:%x updated relative:%lx ",relative,newRel);
+            memcpy(cur + ofst, &newRel, sz);
         }
-        cur += len;
-    }while(cur < inst + size);
+        cur += inst.Len;
+        size -= inst.Len;
+    }while( size > 0);
 
     return 0;
 }
@@ -343,51 +395,40 @@ int32_t calcRelativeOffset(INST* inst,int32_t size,INST* instBaseAddr){
  * 
  * @param from t
  * @param from_inst 
- * @return void* 
+ * @return TrampolineBack* 
  */
-void* insert_back_trampoline(void* trampoline_func, FromInstBackUp* from_inst)
+TrampolineBack* insert_back_trampoline(TrampolineFuncT* trampolineFunc, FromInstBackUp* bakInst)
 {
-    void* origin_func = from_inst->instBaseAddr+from_inst->instBackupSize;
-    LOG_TRACE("trampoline_func:%p origin_func:%p",trampoline_func,origin_func);
+    void* origin_func = bakInst->instBaseAddr+bakInst->instBackupSize;
+    LOG_TRACE("trampoline_func:%p origin_func:%p",trampolineFunc->pTrampFunc,origin_func);
 
-    int32_t saved_inst_size =from_inst->instBackupSize;
-    void* func_saved_inst = from_inst->instBackUp;
+    BYTE* inst  = bakInst->instBackUp;
+    int32_t len = bakInst->instBackupSize;
 
-    #ifdef DTRACE
-    {
-        int i = 0;
-        LOG_TRACE("saved instructions: ");
-        for(;i<saved_inst_size;i++){
-            fprintf(stderr," %X ",func_saved_inst[i]);
-        }
-        fprintf(stderr,"\n");
-    }
-    #endif
-
-    TrampolineBack* back = (TrampolineBack* )get_neighbor_mem(trampoline_func,sizeof(TrampolineBack)+ saved_inst_size);
-    back->restoreInstSize = saved_inst_size;
+    TrampolineBack* back = (TrampolineBack* )get_neighbor_mem(trampolineFunc->pTrampFunc,sizeof(TrampolineBack)+ len);
+    back->restoreInstSize = len;
     back->toAddress = (long)origin_func;
     // insert jmp: trampoline_func to trampoline memory inst address
-    insert_direct_jmp_inst(trampoline_func,back->inst);
+    place_direct_jmp_inst(trampolineFunc->pTrampFunc,back->inst,trampolineFunc->bakInstArLen);
 
     // restore from_inst
-    memcpy(back->inst,func_saved_inst,saved_inst_size);
+    memcpy(back->inst,inst,len);
 
     //note: after reloactedOffset, some inst could be changed
-    if(calcRelativeOffset(back->inst,saved_inst_size,from_inst->instBaseAddr) != 0){
+    if(calcRelativeOffset(back->inst,len,bakInst->instBaseAddr) != 0){
         return NULL;
     }
 
     // jmp trampoline to origin function
-    INST* next_i = back->inst + saved_inst_size;
+    BYTE* jmpInst = back->inst + len;
 
    // check range size
-    if( labs((long ) next_i - (long) origin_func) >> 31 == 0 ){
+    if( labs((long ) jmpInst - (long) origin_func) >> 31 == 0 ){
         // use  directly jmp
-        insert_direct_jmp_inst(next_i,origin_func);
+        place_direct_jmp_inst(jmpInst,origin_func,JMP_INST_SIZE);
     }else{
         // insert jmp: trampoline to func
-        insert_indirect_jmp_inst(next_i,&back->toAddress);
+        place_indirect_jmp_inst(jmpInst,&back->toAddress,LONG_JMP_INST_SIZE);
     }
 
     return back;
@@ -402,16 +443,14 @@ void* insert_back_trampoline(void* trampoline_func, FromInstBackUp* from_inst)
  *  note: go-layer must free trampoline pointer
  * @param src 
  * @param dst 
- * @return void* address of trampoline. NULL: no need to trampoline, directly jmp is enough 
+ * @return TrampolineForward* address of trampoline. NULL: no need to trampoline, directly jmp is enough 
  */
-void* insert_forward_trampoline(void* from, void* to)
+TrampolineForward* insert_forward_trampoline(void* from, void* to)
 {   
-    LOG_TRACE("from:%p to:%p",from,to);
-
     // check range size
     if( labs((long ) from - (long) to) >> 31  == 0 ){
         // use  directly jmp
-        insert_direct_jmp_inst(from,to);
+        place_direct_jmp_inst(from,to,JMP_INST_SIZE);
         return NULL;
     }
 
@@ -420,128 +459,118 @@ void* insert_forward_trampoline(void* from, void* to)
     TrampolineForward* forward = (TrampolineForward*)get_neighbor_mem(from,sizeof(TrampolineForward));
     forward->toAddress = (long)to;
     // x64 
-    insert_indirect_jmp_inst(forward->inst,&forward->toAddress);
-    insert_direct_jmp_inst(from,forward->inst);
+    place_indirect_jmp_inst(forward->inst,&forward->toAddress);
+    place_direct_jmp_inst(from,forward->inst);
 
     return forward;
 }
 
 // exclude  jmp +imm32
-int32_t detour_does_code_end_function_e9(INST* pbCode)
+int32_t detour_does_code_end_function_e9(OpcodeType  pbCode)
 {
-    if (pbCode[0] == 0xeb ||    // jmp +imm8
-        // pbCode[0] == 0xe9 ||    // jmp +imm32
-        pbCode[0] == 0xe0 ||    // jmp eax
-        pbCode[0] == 0xc2 ||    // ret +imm8
-        pbCode[0] == 0xc3 ||    // ret
-        pbCode[0] == 0xcc) {    // brk
+    if (OPCODE_1(pbCode) == 0xeb ||    // jmp +imm8
+        // OPCODE_1(pbCode) == 0xe9 ||    // jmp +imm32
+        OPCODE_1(pbCode) == 0xe0 ||    // jmp eax
+        OPCODE_1(pbCode) == 0xc2 ||    // ret +imm8
+        OPCODE_1(pbCode) == 0xc3 ||    // ret
+        OPCODE_1(pbCode) == 0xcc) {    // brk
         return 1;
     }
-    else if (pbCode[0] == 0xf3 && pbCode[1] == 0xc3) {  // rep ret
+    else if (OPCODE_1(pbCode) == 0xf3 && OPCODE_2(pbCode) == 0xc3) {  // rep ret
         return 1;
     }
-    else if (pbCode[0] == 0xff && pbCode[1] == 0x25) {  // jmp [+imm32]
+    else if (OPCODE_1(pbCode) == 0xff && OPCODE_2(pbCode) == 0x25) {  // jmp [+imm32]
         return 1;
     }
-    else if ((pbCode[0] == 0x26 ||      // jmp es:
-              pbCode[0] == 0x2e ||      // jmp cs:
-              pbCode[0] == 0x36 ||      // jmp ss:
-              pbCode[0] == 0x3e ||      // jmp ds:
-              pbCode[0] == 0x64 ||      // jmp fs:
-              pbCode[0] == 0x65) &&     // jmp gs:
-             pbCode[1] == 0xff &&       // jmp [+imm32]
-             pbCode[2] == 0x25) {
-        return 1;
-    }
+   
     return 0;
 }
-
 
 // copy from detour https://github.com/microsoft/Detours
-int32_t detour_does_code_end_function(INST* pbCode)
+int32_t detour_does_code_end_function(OpcodeType  pbCode)
 {
-    if (pbCode[0] == 0xeb ||    // jmp +imm8
-        pbCode[0] == 0xe9 ||    // jmp +imm32
-        pbCode[0] == 0xe0 ||    // jmp eax
-        pbCode[0] == 0xc2 ||    // ret +imm8
-        pbCode[0] == 0xc3 ||    // ret
-        pbCode[0] == 0xcc) {    // brk
+    if ( OPCODE_1(pbCode) == 0xeb ||    // jmp +imm8
+        OPCODE_1(pbCode) == 0xe9 ||    // jmp +imm32
+        OPCODE_1(pbCode) == 0xe0 ||    // jmp eax
+        OPCODE_1(pbCode) == 0xc2 ||    // ret +imm8
+        OPCODE_1(pbCode) == 0xc3 ||    // ret
+        OPCODE_1(pbCode) == 0xcc) {    // brk
         return 1;
     }
-    else if (pbCode[0] == 0xf3 && pbCode[1] == 0xc3) {  // rep ret
+    else if ( OPCODE_1(pbCode) == 0xf3 &&  OPCODE_1(pbCode) == 0xc3) {  // rep ret
         return 1;
     }
-    else if (pbCode[0] == 0xff && pbCode[1] == 0x25) {  // jmp [+imm32]
+    else if (OPCODE_1(pbCode) == 0xff && OPCODE_2(pbCode) == 0x25) {  // jmp [+imm32]
         return 1;
     }
-    else if ((pbCode[0] == 0x26 ||      // jmp es:
-              pbCode[0] == 0x2e ||      // jmp cs:
-              pbCode[0] == 0x36 ||      // jmp ss:
-              pbCode[0] == 0x3e ||      // jmp ds:
-              pbCode[0] == 0x64 ||      // jmp fs:
-              pbCode[0] == 0x65) &&     // jmp gs:
-             pbCode[1] == 0xff &&       // jmp [+imm32]
-             pbCode[2] == 0x25) {
-        return 1;
-    }
+   
     return 0;
 }
 
 
-
-int32_t make_space_for_jmp_boundary(void* address,int32_t min_size,INST* out_backup_inst,int32_t out_size)
+int32_t make_space_for_jmp_boundary(void* address,const int32_t minSpace,BYTE* bakInstBytes,int32_t maxBakSize)
 {
-    assert(min_size <= out_size);
+    assert(minSpace <= maxBakSize);
 
-    ldasm_data _data;
-    INST* pInst = address;
+    BYTE* pByte = address;
     do{
-        uint32_t inst_len= ldasm(pInst,&_data);
-        if( (_data.flags & F_INVALID) !=0){
+        Inst inst = {0};
+        E_RET_TYPE ret= decode(pByte,minSpace,&inst,64,false);
+
+        if( ret != E_OK ){
             break;
         }
-        if(detour_does_code_end_function(pInst)){
-            LOG_TRACE("met end function when scan space: %X %X",pInst[0],pInst[1]);
+        if(detour_does_code_end_function(inst.Opcode)){
+            char buf[128]={0};
+		    inst_str(&inst,buf,sizeof(buf));
+            LOG_ETRACE("met end function when scan space: %s",buf);
             return -1;
         }
-        pInst+=inst_len;
-    }while((long)pInst - (long)address <min_size);
+
+        #ifdef DTRACE
+        { 
+            char buf[128]={0};
+		    inst_str(&inst,buf,sizeof(buf));
+            LOG_TRACE("inst:%s,len:%d",buf,inst.Len);
+        }
+        #endif
+
+        pByte += inst.Len;
+    }while(pByte - (BYTE*)address < minSpace );
 
     // backup the inst
-    out_size = (long)pInst - (long)address;
-    memcpy(out_backup_inst,address,out_size);
-    return out_size;
+    int32_t usageLen = pByte - (BYTE*)address;
+    memcpy(bakInstBytes,address,usageLen);
+    assert(usageLen >= minSpace);
+    return usageLen;
 }
-
-typedef int32_t OFFSETTYPE;
-#pragma pack (push,1)
-typedef struct call_s
-{
-    INST opcode;
-    OFFSETTYPE address;
-}CallInst;
-#pragma pack(pop)
 
 void* located_nearest_call_target(void*start)
 {
-    ldasm_data _data;
-    INST* pInst = start;
+    #define UNKNOWN_SIZE 32
+    BYTE* pInst = start;
+    Inst _inst = {0};
     do{
-        uint32_t inst_len= ldasm(pInst,&_data);
-        if( (_data.flags & F_INVALID) !=0){
+        E_RET_TYPE ret = decode(pInst,UNKNOWN_SIZE,&_inst,64,false);
+        if( ret != E_OK ){
             break;
         }
-        // get opcode and address
-        INST* opcode = (uint8_t*)pInst + _data.opcd_offset;
-        uint8_t opCodeSize = _data.opcd_size;
-        if(inst_len == CALL_INST_SIZE && opCodeSize ==1 && opcode[0] == 0xE8){
-            CallInst* pCall = ( CallInst*) pInst;
-            INST* pfunc = pInst+ CALL_INST_SIZE + pCall->address;
+        // get pbCode and address
+        BYTE pbCode = _inst.Op;
+        // uint8_t pbCodeSize = _data.opcd_size;
+        if(_inst.Len == CALL_INST_SIZE && pbCode == CALL){
+            Rel* rel = get_rel_arg(&_inst.Args[0]);
+            if(rel == NULL){
+                LOG_TRACE("no such rel in `callq` inst");
+                break;
+            }
+            BYTE* pfunc = pInst+ CALL_INST_SIZE +*rel;
             LOG_TRACE("origin start: %p real func: %p",start,pfunc);
             return pfunc;
         }
-        pInst+=inst_len;
-    }while(detour_does_code_end_function(pInst) != 1);
+        pInst+=_inst.Len;
+    }while(detour_does_code_end_function(_inst.Opcode) != 1);
+
     LOG_TRACE("start:%p no such callq",start);
     return NULL;
 }
@@ -549,24 +578,26 @@ void* located_nearest_call_target(void*start)
 
 void* located_nearest_jmp_target(void*start)
 {
-    ldasm_data _data;
-    INST* pInst = start;
+    #define UNKNOWN_SIZE 32
+    BYTE* pInst = start;
+    Inst _inst = {0};
     do{
-        uint32_t inst_len= ldasm(pInst,&_data);
-        if( (_data.flags & F_INVALID) !=0){
+        E_RET_TYPE ret = decode(pInst,UNKNOWN_SIZE,&_inst,64,false);
+        if( ret != E_OK ){
             break;
         }
-        // get opcode and address
-        INST* opcode = (uint8_t*)pInst + _data.opcd_offset;
-        uint8_t opCodeSize = _data.opcd_size;
-        if(inst_len == JMP_INST_SIZE && opCodeSize ==1 && opcode[0] == 0xE9){
-            CallInst* pCall = ( CallInst*) pInst;
-            INST* pfunc = pInst+ JMP_INST_SIZE + pCall->address;
-            LOG_TRACE("origin start: %p  real func: %p",start,pfunc);
+
+        if(_inst.Len == JMP_INST_SIZE && _inst.Op == JMP && OPCODE_1(_inst.Opcode) == 0xE9){
+            Rel* rel = get_rel_arg(&_inst.Args[0]);
+            if(rel == NULL){
+                LOG_TRACE("no such rel in `callq` inst");
+                break;
+            }
+            BYTE* pfunc = pInst+ JMP_INST_SIZE + *rel;
             return pfunc;
         }
-        pInst+=inst_len;
-    }while(detour_does_code_end_function_e9(pInst) != 1);
+        pInst+=_inst.Len;
+    }while(detour_does_code_end_function_e9(_inst.Opcode) != 1);
     LOG_TRACE("start:%p no such callq",start);
     return NULL;
 }
@@ -600,16 +631,16 @@ void* located_nearest_jmp_target(void*start)
  * @param trampoline 
  * @return void* 
  */
-void* hook(void* from,void* to,void* trampoline_func)
+void* hook(void* from,void* to,void* callFrom)
 {
-    if(from == to ||trampoline_func == from || trampoline_func == to ){
-        LOG_TRACE("input is invalid");
+    if(from == to ||callFrom == from || callFrom == to ){
+        LOG_ETRACE("input is invalid");
         return NULL;
     }
 
     Trampoline* trampoline = (Trampoline*)malloc(sizeof(Trampoline));
     if(trampoline == NULL) {
-        LOG_TRACE("malloc %ld failed",sizeof(Trampoline));
+        LOG_ETRACE("malloc %ld failed",sizeof(Trampoline));
         return NULL;
     }
 
@@ -619,6 +650,7 @@ void* hook(void* from,void* to,void* trampoline_func)
         if(size ==-1){
             return NULL;
         }
+
         trampoline->fromInstBackUp.instBackupSize = size;
         trampoline->fromInstBackUp.instBaseAddr = from;
         trampoline->target = from;
@@ -626,24 +658,27 @@ void* hook(void* from,void* to,void* trampoline_func)
 
     // locate the safe inst boundary for jmp-trampoline_func inst
     {
-        int32_t size = make_space_for_jmp_boundary(trampoline_func,JMP_INST_SIZE,trampoline->trampolineFuncInstBackUp,BACKUP_INST_SIZE);
+        int32_t size = make_space_for_jmp_boundary(callFrom,JMP_INST_SIZE,trampoline->trampolineFunc.bakInstAr,BACKUP_INST_SIZE);
         if(size ==-1){
             return NULL;
         }
-        trampoline->trampolineBackUpSize = size;
-        trampoline->trampoline_func = trampoline_func;
+        trampoline->trampolineFunc.bakInstArLen = size;
+        trampoline->trampolineFunc.pTrampFunc = callFrom;
     }
 
     //1. insert `forward` trampoline
-    trampoline->trampoline01 = insert_forward_trampoline(from,to);
+    trampoline->forward = insert_forward_trampoline(from,to);
+    LOG_TRACE("forward trampoline:%p from:%p to:%p backup:{base:%p size:%d} ",trampoline->forward, \
+        from,to,trampoline->fromInstBackUp.instBaseAddr,trampoline->fromInstBackUp.instBackupSize);
+
     //2. insert `to` trampoline
-    void* trampoline02 = insert_back_trampoline(trampoline_func,&trampoline->fromInstBackUp);
-    if( trampoline02 == NULL){
-        LOG_TRACE("hook：from:%p to:%p trampoline:%p failed",from,to,trampoline_func);
+    TrampolineBack* back = insert_back_trampoline(&trampoline->trampolineFunc,&trampoline->fromInstBackUp);
+    if( back == NULL){
+        LOG_ETRACE("hook：from:%p to:%p trampoline:%p failed",from,to,callFrom);
         return NULL;
     }
-
-    trampoline->trampoline02 = trampoline02;
+    trampoline->back = back;
+    LOG_TRACE("trampoline_func:%p -> origin landing:%lx ",callFrom,back->toAddress);
     //3. return trampoline for unhook
     return trampoline;
 }
@@ -704,7 +739,7 @@ void test_hook()
 void empty(){}
 void test_make_space()
 {
-    INST inst[32];
+    BYTE inst[32];
     assert(make_space_for_jmp_boundary(test_hook,5,inst,32)>0 );
     assert(make_space_for_jmp_boundary(empty,5,inst,32)>0);
     LOG_TRACE("passed");
@@ -712,20 +747,20 @@ void test_make_space()
 
 void testAsmCall()
 {
-    INST inst[]= {0xe8 ,   0x7b  ,  0xfe  ,  0xff  ,  0xff  ,  0x48 };
-    ldasm_data _data;
-    do{
-        int len = ldasm(inst,&_data);
-        assert(len == 5);
-        LOG_TRACE("%d \n",len);
-    }while(0);
-    LOG_TRACE("passed");
+    // BYTE inst[]= {0xe8 ,   0x7b  ,  0xfe  ,  0xff  ,  0xff  ,  0x48 };
+    // ldasm_data _data;
+    // do{
+    //     int len = ldasm(inst,&_data);
+    //     assert(len == 5);
+    //     LOG_TRACE("%d \n",len);
+    // }while(0);
+    // LOG_TRACE("passed");
 }
 
 //@obsolated
 void testLea(){
 
-    INST inst[]= {0x48,0x8D,0x05,0xA9,0xA2,0x020,0x40};
+    BYTE inst[]= {0x48,0x8D,0x05,0xA9,0xA2,0x020,0x40};
     calcRelativeOffset(inst,sizeof(inst),inst+ 1024);
     uint32_t i = 0;
     for(; i< sizeof(inst);i++){
@@ -806,16 +841,33 @@ void test_retStr()
     LOG_TRACE(" hook(HookRetStr,HookRetStr,HookRetStrTrampoline) failed ");
 }
 
+void test_invalid_hook(){
+    hook(retStr,NULL,NULL);
+    hook(retStr,retStr,NULL);
+    hook(retStr,HookRetStr,HookRetStr);
+    hook(retStr,HookRetStrTrampoline,HookRetStrTrampoline);
+}
+
 int main()
 {
+    printf("-------test_make_space---------------------------- \n");
     test_make_space();
+    printf("-------test_hook---------------------------- \n");
     test_hook();
+    printf("-------test_hook---------------------------- \n");
     test_hook();
+    printf("-------testAsmCall---------------------------- \n");
     testAsmCall();
+    printf("-------test_call_nearest_func----------------------------\n");
     test_call_nearest_func();
+    printf("-------test_call_get_jmp32_mem_from_chunk----------------------------\n");
     test_call_get_jmp32_mem_from_chunk();
+    printf("-------test_32_range----------------------------\n");
     test_32_range();
+    printf("-------test_retStr----------------------------\n");
     test_retStr();
+    printf("-------test_invalid_hook----------------------------\n");
+    test_invalid_hook();
     return 0;
 }
 

@@ -16,3 +16,4 @@ test.go
 *.gcno
 *.gcov
 utest
+build/

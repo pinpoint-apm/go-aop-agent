@@ -27,20 +27,24 @@
 
 #ifndef NTRACE
 #define LOG_TRACE(fmt,args...)  fprintf(stderr,"[%s:%d] %s: " fmt "\n",__FILE__,__LINE__,__FUNCTION__,##args)
+#define LOG_ETRACE(fmt,args...)  fprintf(stderr,"[%s:%d] 🚫 %s: " fmt "\n",__FILE__,__LINE__,__FUNCTION__,##args)
 #else
 #define LOG_TRACE(fmt,args...) 
 #endif
-typedef unsigned char INST;
+
+#ifndef BYTE
+typedef unsigned char BYTE;
+#endif
 
 typedef struct trampoline_forward_s{
     long toAddress;
-    INST inst[6];   // indirectly jmp：0xFF 0x25
+    BYTE inst[6];   // indirectly jmp：0xFF 0x25
 }TrampolineForward;
 
 typedef struct trampoline_back_s{
     long toAddress;
     int32_t restoreInstSize;
-    INST inst[0]; // include restore inst and jmp
+    BYTE inst[0]; // include restore inst and jmp inst
 }TrampolineBack;
 
 #define BACKUP_INST_SIZE 32
@@ -49,7 +53,7 @@ typedef struct trampoline_back_s{
 #define CALL_INST_SIZE 5
 
 typedef struct {
-    INST instBackUp[BACKUP_INST_SIZE];
+    BYTE instBackUp[BACKUP_INST_SIZE];
     uint8_t instBackupSize;
     /*
     * ┌──────────────┐
@@ -62,8 +66,14 @@ typedef struct {
     * │              │
     * └──────────────┘
     */
-    INST* instBaseAddr; // base address of backup
+    BYTE* instBaseAddr; // base address of backup
 }FromInstBackUp;
+
+typedef struct {
+    void* pTrampFunc;
+    BYTE bakInstAr[BACKUP_INST_SIZE];
+    uint8_t bakInstArLen;
+}TrampolineFuncT;
 
 typedef struct trampoline_s{
     /**
@@ -74,16 +84,14 @@ typedef struct trampoline_s{
 
     FromInstBackUp fromInstBackUp;
 
-    INST trampolineFuncInstBackUp[BACKUP_INST_SIZE];
-    uint8_t trampolineBackUpSize;
     // store the src address for restore
     void* target;
-    void* trampoline_func;
-    TrampolineForward* trampoline01;
-    TrampolineBack* trampoline02;
+    TrampolineFuncT trampolineFunc;
+    TrampolineForward* forward;
+    TrampolineBack* back;
 }Trampoline;
 
-void* hook(void* from,void* to,void* trampoline_func);
+void* hook(void* from,void* to,void* trampolineFunc);
 void* located_nearest_call_target(void*start);
 void* located_nearest_jmp_target(void*start);
 void  unhook(void* ptr);

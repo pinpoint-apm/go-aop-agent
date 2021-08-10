@@ -1674,7 +1674,7 @@ BREAK_DECODE:
 	return ret;
 }
 
-#ifdef UTEST
+#ifdef DEBUG_GOx86_ASM
 
 int main(int argc,const char* argv[]){
     (void)argc;
@@ -1696,13 +1696,17 @@ int main(int argc,const char* argv[]){
 		{2,{0x66,0x90}},
 		{1,{0xc5}},
 		{1,{0xc4}},
+		{5,{0xe8,0x76,0x7f,0xff,0xff}},
+		// {2,{0xf3, 0xc3}},
+		{6,{0x66,0xe9,0x11,0x22,0x33,0x44}},
+		{7,{0x65, 0xff, 0x25, 0x11, 0x22, 0x33, 0x44}},
 	};
 	for(uint32_t i=0 ; i<sizeof(regs)/sizeof(Regs) ; i++) {
 		Inst inst = {0};
 		int ret = decode(regs[i].reg,regs[i].len,&inst,64,false);
 		char buf[128]={0};
 		inst_str(&inst,buf,sizeof(buf));
-		printf("%d,%d,%s \n",ret,inst.Len,buf);
+		printf("ret:%d,len:%d, inst_str:%s \n",ret,inst.Len,buf);
 	}
 
     return 0;
