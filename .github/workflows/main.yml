@@ -8,57 +8,70 @@ jobs:
     container: ghcr.io/pinpoint-apm/pinpoint-c-agent/golang-build-env-1.16:latest
     steps:
       - uses: actions/checkout@v2
-      - name: test c-aop
+      - name: test asm-c
         run : |
-          cd aop && mkdir build && cd build && cmake ..
-          make
-          ctest -VV
+          cd asm && mkdir build && cd build && cmake .. && make
+          ctest -T Test
+          ctest -T Coverage
+      - name: test asm-go
+        run: |
+          cd asm
+          go test -v -coverprofile cover.out .
       - name: api test
         run: |
           cd common
           go test -v -coverprofile cover.out .
-          cd ../aop
+      - name: aop test
+        run: |
+          cd aop
           go test -v -coverprofile cover.out .
       - name: Codecovage
         uses: codecov/codecov-action@v1
 
-      - name: build mux
+      - name: compile test mux apps
         run: |
           cd testapps/mux
           GOOS=linux GOARCH=amd64 go mod download
           GOOS=linux GOARCH=amd64 go build -o testapp
-      - name: build echo
+      - name: compile test echo apps
         run: |
           cd testapps/echo
           GOOS=linux GOARCH=amd64 go mod download
           GOOS=linux GOARCH=amd64 go build -o testapp
           
-  # go13:
-  #   runs-on: ubuntu-latest
-  #   container: ghcr.io/pinpoint-apm/pinpoint-c-agent/golang-build-env-1.13:latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - name: test -NTEST
-  #       run : |
-  #         cd aop && mkdir build && cd build && cmake ..
-  #         make
-  #         ./ctest
-  #     - name: api test
-  #       run: |
-  #         cd common
-  #         go test -v -coverprofile cover.out .
-  #         cd ../aop
-  #         go test -v -coverprofile cover.out .
-  #     - name: Codecovage
-  #       uses: codecov/codecov-action@v1
+  go13:
+    runs-on: ubuntu-latest
+    container: ghcr.io/pinpoint-apm/pinpoint-c-agent/golang-build-env-1.13:latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: test asm-c
+        run : |
+          cd asm && mkdir build && cd build && cmake ..
+          make
+          ctest -T Coverage
+          ctest -T Test
+      - name: test asm-go
+        run: |
+          cd asm
+          go test -v -coverprofile cover.out .
+      - name: api test
+        run: |
+          cd common
+          go test -v -coverprofile cover.out .
+      - name: aop test
+        run: |
+          cd aop
+          go test -v -coverprofile cover.out .
+      - name: Codecovage
+        uses: codecov/codecov-action@v1
 
-  #     - name: build mux
-  #       run: |
-  #         cd testapps/mux
-  #         GOOS=linux GOARCH=amd64 go mod download
-  #         GOOS=linux GOARCH=amd64 go build -o testapp
-  #     - name: build echo
-  #       run: |
-  #         cd testapps/echo
-  #         GOOS=linux GOARCH=amd64 go mod download
-  #         GOOS=linux GOARCH=amd64 go build -o testapp
+      - name: compile test mux apps
+        run: |
+          cd testapps/mux
+          GOOS=linux GOARCH=amd64 go mod download
+          GOOS=linux GOARCH=amd64 go build -o testapp
+      - name: compile test echo apps
+        run: |
+          cd testapps/echo
+          GOOS=linux GOARCH=amd64 go mod download
+          GOOS=linux GOARCH=amd64 go build -o testapp

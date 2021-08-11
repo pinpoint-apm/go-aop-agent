@@ -19,7 +19,7 @@
 // license that can be found in the LICENSE file.
 
 // package x86asm
-package aop
+package asm
 
 import (
 	"encoding/hex"

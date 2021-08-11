@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package aop
+package asm
 
 //#cgo CFLAGS: -DNTRACE
 //#include "goX86asm.h"
