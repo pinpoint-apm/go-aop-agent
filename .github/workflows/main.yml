@@ -8,11 +8,11 @@ jobs:
     container: ghcr.io/pinpoint-apm/pinpoint-c-agent/golang-build-env-1.16:latest
     steps:
       - uses: actions/checkout@v2
-      - name: test -NTEST
+      - name: test c-aop
         run : |
-          cd aop
+          cd aop && mkdir build && cd build && cmake ..
           make
-          ./test
+          ctest -VV
       - name: api test
         run: |
           cd common
@@ -33,32 +33,32 @@ jobs:
           GOOS=linux GOARCH=amd64 go mod download
           GOOS=linux GOARCH=amd64 go build -o testapp
           
-  go13:
-    runs-on: ubuntu-latest
-    container: ghcr.io/pinpoint-apm/pinpoint-c-agent/golang-build-env-1.13:latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: test -NTEST
-        run : |
-          cd aop
-          make
-          ./test
-      - name: api test
-        run: |
-          cd common
-          go test -v -coverprofile cover.out .
-          cd ../aop
-          go test -v -coverprofile cover.out .
-      - name: Codecovage
-        uses: codecov/codecov-action@v1
+  # go13:
+  #   runs-on: ubuntu-latest
+  #   container: ghcr.io/pinpoint-apm/pinpoint-c-agent/golang-build-env-1.13:latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: test -NTEST
+  #       run : |
+  #         cd aop && mkdir build && cd build && cmake ..
+  #         make
+  #         ./ctest
+  #     - name: api test
+  #       run: |
+  #         cd common
+  #         go test -v -coverprofile cover.out .
+  #         cd ../aop
+  #         go test -v -coverprofile cover.out .
+  #     - name: Codecovage
+  #       uses: codecov/codecov-action@v1
 
-      - name: build mux
-        run: |
-          cd testapps/mux
-          GOOS=linux GOARCH=amd64 go mod download
-          GOOS=linux GOARCH=amd64 go build -o testapp
-      - name: build echo
-        run: |
-          cd testapps/echo
-          GOOS=linux GOARCH=amd64 go mod download
-          GOOS=linux GOARCH=amd64 go build -o testapp
+  #     - name: build mux
+  #       run: |
+  #         cd testapps/mux
+  #         GOOS=linux GOARCH=amd64 go mod download
+  #         GOOS=linux GOARCH=amd64 go build -o testapp
+  #     - name: build echo
+  #       run: |
+  #         cd testapps/echo
+  #         GOOS=linux GOARCH=amd64 go mod download
+  #         GOOS=linux GOARCH=amd64 go build -o testapp

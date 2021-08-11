@@ -9,6 +9,8 @@ core.*
 pinpoint/pinpoint.test
 test.go
 *.txt
+!CMakeLists.txt
+!aop/testdata/decode.txt
 *.test
 .vscode
 .idea
