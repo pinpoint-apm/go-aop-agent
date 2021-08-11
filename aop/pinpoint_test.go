@@ -17,15 +17,9 @@
 package aop
 
 import (
-	"os"
 	"runtime"
 	"testing"
 )
-
-func TestMain(m *testing.M) {
-	result := m.Run()
-	os.Exit(result)
-}
 
 //go:noinline
 func foo(a, b int32) int32 {

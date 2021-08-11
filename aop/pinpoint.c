@@ -277,7 +277,7 @@ int32_t place_direct_jmp_inst(void*src,void* target,uint32_t placedSize)
 {
     assert( placedSize >= JMP_INST_SIZE );
     set_mm_area_opt(src,JMP_INST_SIZE,PROT_READ|PROT_WRITE|PROT_EXEC);
-    #ifdef DTRACE
+    #if DTRACE
     { 
         BYTE* raw = src;
         LOG_TRACE("before:%p %X %X %X %X %X",src,raw[0],raw[1],raw[2],raw[3],raw[4]);
@@ -288,7 +288,7 @@ int32_t place_direct_jmp_inst(void*src,void* target,uint32_t placedSize)
     *(int32_t*)inst++ = (int32_t)(target - src  - 5);
     place_safe_nop_inst(inst+JMP_INST_SIZE,placedSize - JMP_INST_SIZE);
     set_mm_area_opt(src,JMP_INST_SIZE,PROT_READ|PROT_EXEC);
-    #ifdef DTRACE
+    #if DTRACE
     {
         BYTE* raw = src;
         LOG_TRACE("[directly jmp] after:%p target:%p %X %X %X %X %X",src,target,raw[0],raw[1],raw[2],raw[3],raw[4]);
@@ -301,7 +301,7 @@ int32_t place_indirect_jmp_inst(void*src,void* target,uint32_t placedSize)
 {
     assert(placedSize>=LONG_JMP_INST_SIZE);
     set_mm_area_opt(src,LONG_JMP_INST_SIZE,PROT_READ|PROT_WRITE|PROT_EXEC);
-     #ifdef DTRACE
+     #if DTRACE
     { 
         BYTE* raw = src;
         LOG_TRACE("before:%p %X %X %X %X %X %X",src,raw[0],raw[1],raw[2],raw[3],raw[4],raw[5]);
@@ -313,7 +313,7 @@ int32_t place_indirect_jmp_inst(void*src,void* target,uint32_t placedSize)
     *(int32_t*)inst++= (int32_t)(target - (src + 6));
     place_safe_nop_inst(inst+LONG_JMP_INST_SIZE,placedSize - LONG_JMP_INST_SIZE);
     set_mm_area_opt(src,LONG_JMP_INST_SIZE,PROT_READ|PROT_EXEC);
-    #ifdef DTRACE
+    #if DTRACE
     {
         BYTE* raw = src;
         LOG_TRACE("[indirectly jmp] src:%p target:%p %X %X %X %X %X %X",src,target,raw[0],raw[1],raw[2],raw[3],raw[4],raw[5]);
@@ -459,8 +459,8 @@ TrampolineForward* insert_forward_trampoline(void* from, void* to)
     TrampolineForward* forward = (TrampolineForward*)get_neighbor_mem(from,sizeof(TrampolineForward));
     forward->toAddress = (long)to;
     // x64 
-    place_indirect_jmp_inst(forward->inst,&forward->toAddress);
-    place_direct_jmp_inst(from,forward->inst);
+    place_indirect_jmp_inst(forward->inst,&forward->toAddress,LONG_JMP_INST_SIZE);
+    place_direct_jmp_inst(from,forward->inst,JMP_INST_SIZE);
 
     return forward;
 }
@@ -515,11 +515,13 @@ int32_t make_space_for_jmp_boundary(void* address,const int32_t minSpace,BYTE* b
     BYTE* pByte = address;
     do{
         Inst inst = {0};
-        E_RET_TYPE ret= decode(pByte,minSpace,&inst,64,false);
+        E_RET_TYPE ret= decode(pByte,BACKUP_INST_SIZE,&inst,64,false);
 
         if( ret != E_OK ){
-            break;
+            LOG_ETRACE("unknown instruction");
+            return -1;
         }
+
         if(detour_does_code_end_function(inst.Opcode)){
             char buf[128]={0};
 		    inst_str(&inst,buf,sizeof(buf));
@@ -527,11 +529,11 @@ int32_t make_space_for_jmp_boundary(void* address,const int32_t minSpace,BYTE* b
             return -1;
         }
 
-        #ifdef DTRACE
+        #if DTRACE
         { 
             char buf[128]={0};
 		    inst_str(&inst,buf,sizeof(buf));
-            LOG_TRACE("inst:%s,len:%d",buf,inst.Len);
+            LOG_TRACE("pInst:%p inst:{%s},len:%d",pByte,buf,inst.Len);
         }
         #endif
 
@@ -540,8 +542,11 @@ int32_t make_space_for_jmp_boundary(void* address,const int32_t minSpace,BYTE* b
 
     // backup the inst
     int32_t usageLen = pByte - (BYTE*)address;
+    if(usageLen > maxBakSize){
+        LOG_ETRACE("[🐛]backup space is too small. address:%p usageLen:%d maxBakSize:%d",address,usageLen,maxBakSize);
+        return -1;
+    }
     memcpy(bakInstBytes,address,usageLen);
-    assert(usageLen >= minSpace);
     return usageLen;
 }
 
@@ -739,9 +744,23 @@ void test_hook()
 void empty(){}
 void test_make_space()
 {
-    BYTE inst[32];
-    assert(make_space_for_jmp_boundary(test_hook,5,inst,32)>0 );
-    assert(make_space_for_jmp_boundary(empty,5,inst,32)>0);
+    {
+        BYTE inst[32] = {0};
+        assert(make_space_for_jmp_boundary(test_hook,5,inst,32)>0 );
+        assert(make_space_for_jmp_boundary(empty,5,inst,32)>0);
+    }
+    // BYTE inst[9]={0x64, 0x48, 0x8b, 0x0c, 0x25 ,0xf8 ,0xff ,0xff ,0xff};
+    {
+        BYTE inst[9] ={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+        BYTE movInst[9]={0x64, 0x48, 0x8b, 0x0c, 0x25 ,0xf8 ,0xff ,0xff ,0xff};
+        BYTE buf[32]={0};
+        assert(make_space_for_jmp_boundary(inst,1,buf,32) == -1);
+        assert(make_space_for_jmp_boundary(inst,3,buf,32) == -1);
+        assert(make_space_for_jmp_boundary(inst,4,buf,32) == -1);
+        assert(make_space_for_jmp_boundary(inst,5,buf,32) == -1);
+        assert(make_space_for_jmp_boundary(movInst,sizeof(movInst),buf,32) == sizeof(inst));
+    }
+
     LOG_TRACE("passed");
 }
 
@@ -871,5 +890,5 @@ int main()
     return 0;
 }
 
-// gcc -g common.c LDasm.c -Wall
 #endif
+

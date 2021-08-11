@@ -25,12 +25,17 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#ifndef NTRACE
+#ifdef TRACE
+
+#define DTRACE 1
 #define LOG_TRACE(fmt,args...)  fprintf(stderr,"[%s:%d] %s: " fmt "\n",__FILE__,__LINE__,__FUNCTION__,##args)
-#define LOG_ETRACE(fmt,args...)  fprintf(stderr,"[%s:%d] 🚫 %s: " fmt "\n",__FILE__,__LINE__,__FUNCTION__,##args)
+
 #else
+#define DTRACE 0
 #define LOG_TRACE(fmt,args...) 
 #endif
+
+#define LOG_ETRACE(fmt,args...)  fprintf(stderr,"[%s:%d] 🚫 %s: " fmt "\n",__FILE__,__LINE__,__FUNCTION__,##args)
 
 #ifndef BYTE
 typedef unsigned char BYTE;

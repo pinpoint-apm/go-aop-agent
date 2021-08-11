@@ -1700,13 +1700,14 @@ int main(int argc,const char* argv[]){
 		// {2,{0xf3, 0xc3}},
 		{6,{0x66,0xe9,0x11,0x22,0x33,0x44}},
 		{7,{0x65, 0xff, 0x25, 0x11, 0x22, 0x33, 0x44}},
+		{9,{0x64, 0x48, 0x8b, 0x0c, 0x25 ,0xf8 ,0xff ,0xff ,0xff}},//11
 	};
 	for(uint32_t i=0 ; i<sizeof(regs)/sizeof(Regs) ; i++) {
 		Inst inst = {0};
 		int ret = decode(regs[i].reg,regs[i].len,&inst,64,false);
 		char buf[128]={0};
 		inst_str(&inst,buf,sizeof(buf));
-		printf("ret:%d,len:%d, inst_str:%s \n",ret,inst.Len,buf);
+		printf("index:[%d] ret:%d,len:%d, inst_str:%s \n",i,ret,inst.Len,buf);
 	}
 
     return 0;

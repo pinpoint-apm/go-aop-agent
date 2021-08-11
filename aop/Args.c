@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021 NAVER Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #include "Args.h"
 #include <stdio.h>
 #include <assert.h>
@@ -75,7 +90,7 @@ void args_str(ArgsT* args,char* buf ,int size)
 			if(m == NULL) return ;
 			char scaleBuf[32]={0};
 			char dispBuf[32]={0};
-			const char*baseStr =NULL ,*plus="" ,*index = "",*scale = "";
+			const char*baseStr = "" ,*plus="" ,*index = "",*scale = "";
 			if (m->Base !=0){
 				baseStr = reg_name(m->Base);
 			}
@@ -92,7 +107,7 @@ void args_str(ArgsT* args,char* buf ,int size)
 
 			}
 
-			if( (m->Disp !=0 || m->Base == 0) &&  m->Scale == 0) {
+			if( m->Disp !=0 || (m->Base == 0 &&  m->Scale == 0)) {
 				snprintf(dispBuf,32,"+0x%lx",m->Disp);
 			}
 			snprintf(buf,size,"[%s%s%s%s%s]",baseStr,plus,scale,index,dispBuf);

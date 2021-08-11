@@ -22,8 +22,8 @@ import (
 	"unsafe"
 )
 
-//#cgo CFLAGS: -DNTEST -DNTRACE
-//#include "pinpoint.h"
+// #cgo CFLAGS: -DNTEST -DTRACE
+// #include "pinpoint.h"
 import "C"
 
 var trampolineMap map[uintptr]unsafe.Pointer
