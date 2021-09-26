@@ -32,12 +32,12 @@ jobs:
       - name: compile test mux apps
         run: |
           cd testapps/mux
-          GOOS=linux GOARCH=amd64 go mod download
+          GOOS=linux GOARCH=amd64 go mod tidy
           GOOS=linux GOARCH=amd64 go build -o testapp
       - name: compile test echo apps
         run: |
           cd testapps/echo
-          GOOS=linux GOARCH=amd64 go mod download
+          GOOS=linux GOARCH=amd64 go mod tidy
           GOOS=linux GOARCH=amd64 go build -o testapp
           
   go13:
@@ -71,10 +71,10 @@ jobs:
       - name: compile test mux apps
         run: |
           cd testapps/mux
-          GOOS=linux GOARCH=amd64 go mod download
+          GOOS=linux GOARCH=amd64 go mod tidy
           GOOS=linux GOARCH=amd64 go build -o testapp
       - name: compile test echo apps
         run: |
           cd testapps/echo
-          GOOS=linux GOARCH=amd64 go mod download
+          GOOS=linux GOARCH=amd64 go mod tidy
           GOOS=linux GOARCH=amd64 go build -o testapp
