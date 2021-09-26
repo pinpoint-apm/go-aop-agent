@@ -26,12 +26,11 @@ require (
 	golang.org/x/net v0.0.0-20210525063256-abc453219eb5 // indirect
 	golang.org/x/time v0.0.0-20210608053304-ed9ce3a009e4 // indirect
 	google.golang.org/genproto v0.0.0-20210608205507-b6d2f5bf0d7d // indirect
-	github.com/pinpoint-apm/go-aop-agent v0.0.1
+	github.com/pinpoint-apm/go-aop-agent v1.0.0
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
 replace (
 	github.com/coreos/bbolt v1.3.5 => go.etcd.io/bbolt v1.3.5
 	google.golang.org/grpc => google.golang.org/grpc v1.26.0
-	github.com/pinpoint-apm/go-aop-agent => ../../
 )
