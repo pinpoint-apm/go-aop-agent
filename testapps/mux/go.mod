@@ -9,7 +9,7 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
 	go.mongodb.org/mongo-driver v1.5.3
 	naver/app v0.0.0-00010101000000-000000000000
-	github.com/pinpoint-apm/go-aop-agent v0.0.1
+	github.com/pinpoint-apm/go-aop-agent v1.0.0
 	github.com/pinpoint-apm/go-aop-agent/libs/httpClient v0.0.0-20210610105738-6027a2ff599f
 	github.com/pinpoint-apm/go-aop-agent/libs/mongo v0.0.0-20210630061937-33ab55fd140c
 	github.com/pinpoint-apm/go-aop-agent/libs/redisv8 v0.0.0-00010101000000-000000000000 // indirect
@@ -17,12 +17,4 @@ require (
 	github.com/pinpoint-apm/go-aop-agent/middleware/mux v0.0.0-20210610105738-6027a2ff599f
 )
 
-replace (
-	github.com/pinpoint-apm/go-aop-agent => ../../
-	github.com/pinpoint-apm/go-aop-agent/libs/httpClient => ../../libs/httpClient
-	github.com/pinpoint-apm/go-aop-agent/libs/mongo => ../../libs/mongo
-	github.com/pinpoint-apm/go-aop-agent/libs/redisv8 => ../../libs/redisv8
-	github.com/pinpoint-apm/go-aop-agent/libs/sql => ../../libs/sql
-	github.com/pinpoint-apm/go-aop-agent/middleware/mux => ../../middleware/mux
-)
 replace naver/app => ./app

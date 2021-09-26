@@ -6,5 +6,3 @@ require (
 	github.com/labstack/echo/v4 v4.3.0
 	github.com/pinpoint-apm/go-aop-agent v1.0.0
 )
-
-replace github.com/pinpoint-apm/go-aop-agent => ../../
