@@ -62,7 +62,7 @@ cpu arch | amd64(x86_64)|
     ...
     ```
 
-3. At last, execute `go mod download`.
+3. At last, execute `go mod tidy`.
    
 #### Build your project in `build-env`
 
