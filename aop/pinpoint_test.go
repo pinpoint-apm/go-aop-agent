@@ -397,7 +397,31 @@ func hookRaw() int {
 	return hookRawTrampoline() + 2
 }
 
+func fakeRaw() string {
+	return ""
+}
+
 func TestAddHookP_CALL(t *testing.T) {
+
+	if baseError := AddHookP_CALL("fakeRaw", "fakeRaw", hookRawTrampoline); baseError == nil {
+		t.Log("callRaw failed")
+		t.Fail()
+	}
+
+	if baseError := AddHookP_CALL(callRaw, "fakeRaw", hookRawTrampoline); baseError == nil {
+		t.Log("callRaw failed")
+		t.Fail()
+	}
+
+	if baseError := AddHookP_CALL(callRaw, fakeRaw, "hookRawTrampoline"); baseError == nil {
+		t.Log("callRaw failed")
+		t.Fail()
+	}
+
+	if baseError := AddHookP_CALL(callRaw, fakeRaw, hookRawTrampoline); baseError == nil {
+		t.Log("callRaw failed")
+		t.Fail()
+	}
 
 	baseError := AddHookP_CALL(callRaw, hookRaw, hookRawTrampoline)
 	if baseError != nil {

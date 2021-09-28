@@ -25,6 +25,10 @@ jobs:
         run: |
           cd aop
           go test -v -coverprofile cover.out .
+      - name: libs test
+        run: |
+          cd libs
+          for dir in * ; do cd  $dir; go mod tidy; go test -v; cd ..; done
 
       # - uses: actions/checkout@master
       # - uses: codecov/codecov-action@v2
@@ -63,6 +67,12 @@ jobs:
         run: |
           cd aop
           go test -v -coverprofile cover.out .
+
+      - name: libs test
+        run: |
+          cd libs
+          for dir in * ; do cd  $dir; go mod tidy; go test -v; cd ..; done
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
         # with:

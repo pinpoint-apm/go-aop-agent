@@ -18,6 +18,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/jonboulle/clockwork v0.2.2 // indirect
+	github.com/pinpoint-apm/go-aop-agent v1.0.1
 	github.com/prometheus/client_golang v1.11.0 // indirect
 	github.com/soheilhy/cmux v0.1.5 // indirect
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802 // indirect
@@ -26,7 +27,6 @@ require (
 	golang.org/x/net v0.0.0-20210525063256-abc453219eb5 // indirect
 	golang.org/x/time v0.0.0-20210608053304-ed9ce3a009e4 // indirect
 	google.golang.org/genproto v0.0.0-20210608205507-b6d2f5bf0d7d // indirect
-	github.com/pinpoint-apm/go-aop-agent v1.0.0
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 

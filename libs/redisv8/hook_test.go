@@ -14,6 +14,12 @@
  * limitations under the License.
  */
 
-package pinpoint
+package redisv8
 
-const Version = "v1.0.2"
+import (
+	"testing"
+)
+
+func TestHook(t *testing.T) {
+	// just call init
+}

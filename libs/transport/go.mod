@@ -1,4 +1,4 @@
-module github.com/pinpoint-apm/go-aop-agent/libs/httpClient
+module github.com/pinpoint-apm/go-aop-agent/libs/transport
 
 go 1.16
 

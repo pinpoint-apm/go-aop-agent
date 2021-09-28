@@ -36,7 +36,19 @@ func AddHookP_CALL(iSrc, iTarget, iTrampoline_func interface{}) error {
 	src := reflect.ValueOf(iSrc)
 	target := reflect.ValueOf(iTarget)
 	trampoline_func := reflect.ValueOf(iTrampoline_func)
-	// skip Kind checking
+
+	// bug: check the signature of all functions
+	if src.Kind() != reflect.Func {
+		return errors.New("src is not function")
+	} else if target.Kind() != reflect.Func {
+		return errors.New("target is not function")
+	} else if trampoline_func.Kind() != reflect.Func {
+		return errors.New("trampoline_func is not function")
+	}
+
+	if src.Type() != target.Type() || target.Type() != trampoline_func.Type() {
+		return errors.New("src, target,trampoline_func signature must be the same")
+	}
 
 	newSrcPointer := C.located_nearest_call_target(unsafe.Pointer(src.Pointer()))
 	if newSrcPointer == nil {
