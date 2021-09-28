@@ -14,6 +14,19 @@
  * limitations under the License.
  */
 
-package pinpoint
+package transport
 
-const Version = "v1.0.2"
+import (
+	"net/http"
+
+	"github.com/pinpoint-apm/go-aop-agent/aop"
+	"github.com/pinpoint-apm/go-aop-agent/common"
+)
+
+func init() {
+	if err := aop.AddHookP_CALL((*http.Transport).RoundTrip, hook_transport, hook_transport_trampoline); err != nil {
+		common.Logf("Hook (*http.Transport).RoundTrip failed:%s", err)
+		return
+	}
+	common.Logf("(*http.Transport).RoundTrip is hooked")
+}

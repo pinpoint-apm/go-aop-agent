@@ -56,6 +56,14 @@ func getUser(c echo.Context) error {
 		log.Println(res.InsertedID)
 	}
 
+	// tr := &http.Transport{
+	// 	MaxIdleConns:       10,
+	// 	IdleConnTimeout:    30 * time.Second,
+	// 	DisableCompression: true,
+	// }
+	// client1 := &http.Client{Transport: tr}
+	// client1.Get("https://example.com")
+
 	return c.String(http.StatusOK, id)
 }
 
