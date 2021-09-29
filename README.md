@@ -1,4 +1,4 @@
-[![Build](https://github.com/pinpoint-apm/go-aop-agent/actions/workflows/main.yml/badge.svg)](https://github.com/pinpoint-apm/go-aop-agent/actions/workflows/main.yml) [![codecov](https://codecov.io/gh/pinpoint-apm/go-aop-agent/branch/master/graph/badge.svg?token=zeOfossRWq)](https://codecov.io/gh/pinpoint-apm/go-aop-agent)
+[![Build](https://github.com/pinpoint-apm/go-aop-agent/actions/workflows/main.yml/badge.svg)](https://github.com/pinpoint-apm/go-aop-agent/actions/workflows/main.yml) [![Test libraries](https://github.com/pinpoint-apm/go-aop-agent/actions/workflows/libraries-test.yml/badge.svg)](https://github.com/pinpoint-apm/go-aop-agent/actions/workflows/libraries-test.yml) [![codecov](https://codecov.io/gh/pinpoint-apm/go-aop-agent/branch/master/graph/badge.svg?token=zeOfossRWq)](https://codecov.io/gh/pinpoint-apm/go-aop-agent)
 ## Getting Started
 
 ### Requirement
