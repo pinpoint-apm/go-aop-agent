@@ -1,6 +1,6 @@
 name: Test libraries
 
-on: [workflow_dispatch,published,pull_request]
+on: [workflow_dispatch,release,pull_request]
 
 jobs:
   go16:
