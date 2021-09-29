@@ -25,6 +25,12 @@ import (
 )
 
 func PinpointMiddleWareV4(next echo.HandlerFunc) echo.HandlerFunc {
+	if common.AgentIsDisabled() {
+		return func(c echo.Context) (err error) {
+			return next(c)
+		}
+	}
+
 	return func(c echo.Context) (err error) {
 		// check while list
 		url := c.Request().RequestURI

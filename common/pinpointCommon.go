@@ -428,3 +428,16 @@ func IsIgnore(url string) bool {
 	_, OK := ignoreUrls[url]
 	return OK
 }
+
+/**
+ * @description:
+ *	if FORCE_DISABLE_PINPOINT_AGENT ==true, aop,middleware could not working after restart
+ *	user can evn FORCE_DISABLE_PINPOINT_AGENT=true to disable pinpoint agent without recompiling binary program
+ */
+func AgentIsDisabled() bool {
+	if flag := os.Getenv("FORCE_DISABLE_PINPOINT_AGENT"); strings.ToLower(flag) == "true" {
+		return true
+	} else {
+		return false
+	}
+}

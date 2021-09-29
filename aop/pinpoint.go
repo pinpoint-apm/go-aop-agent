@@ -20,6 +20,8 @@ import (
 	"errors"
 	"reflect"
 	"unsafe"
+
+	"github.com/pinpoint-apm/go-aop-agent/common"
 )
 
 // #cgo CFLAGS: -DNTEST
@@ -33,6 +35,11 @@ func init() {
 }
 
 func AddHookP_CALL(iSrc, iTarget, iTrampoline_func interface{}) error {
+
+	if common.AgentIsDisabled() {
+		return errors.New("agent disabled")
+	}
+
 	src := reflect.ValueOf(iSrc)
 	target := reflect.ValueOf(iTarget)
 	trampoline_func := reflect.ValueOf(iTrampoline_func)
@@ -70,6 +77,10 @@ func AddHookP_CALL(iSrc, iTarget, iTrampoline_func interface{}) error {
 }
 
 func AddHookP_JMP(iSrc, iTarget, iTrampoline_func interface{}) error {
+	if common.AgentIsDisabled() {
+		return errors.New("agent disabled")
+	}
+
 	src := reflect.ValueOf(iSrc)
 	target := reflect.ValueOf(iTarget)
 	trampoline_func := reflect.ValueOf(iTrampoline_func)
@@ -104,6 +115,11 @@ func AddHookP_JMP(iSrc, iTarget, iTrampoline_func interface{}) error {
  * @return {*}
  */
 func AddHook(iSrc, iTarget, iTrampoline_func interface{}) error {
+
+	if common.AgentIsDisabled() {
+		return errors.New("agent disabled")
+	}
+
 	src := reflect.ValueOf(iSrc)
 	target := reflect.ValueOf(iTarget)
 	trampoline_func := reflect.ValueOf(iTrampoline_func)
