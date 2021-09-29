@@ -40,6 +40,12 @@ func wrapperResponseWriter(w http.ResponseWriter) *pinpointResponseWriter {
 }
 
 func PinpointMuxMiddleWare(next http.Handler) http.Handler {
+	if common.AgentIsDisabled() {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			next.ServeHTTP(w, r)
+		})
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Do stuff here
 		// log.Println(r.RequestURI)

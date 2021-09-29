@@ -1,4 +1,4 @@
-name: Build
+name: Test Aop,asm,common
 
 on: [push, pull_request, workflow_dispatch]
 
@@ -12,37 +12,18 @@ jobs:
         run : |
           cd asm && mkdir build && cd build && cmake .. && make
           ctest -T Test
-          ctest -T Coverage
       - name: test asm-go
         run: |
           cd asm
-          go test -v -coverprofile cover.out .
+          go test -v  .
       - name: api test
         run: |
           cd common
-          go test -v -coverprofile cover.out .
+          go test -v  .
       - name: aop test
         run: |
           cd aop
-          go test -v -coverprofile cover.out .
-      - name: libs test
-        run: |
-          cd libs
-          for dir in * ; do cd  $dir; go mod tidy; go test -v; cd ..; done
-
-      # - uses: actions/checkout@master
-      # - uses: codecov/codecov-action@v2
-
-      - name: compile test mux apps
-        run: |
-          cd testapps/mux
-          GOOS=linux GOARCH=amd64 go mod tidy
-          GOOS=linux GOARCH=amd64 go build -o testapp
-      - name: compile test echo apps
-        run: |
-          cd testapps/echo
-          GOOS=linux GOARCH=amd64 go mod tidy
-          GOOS=linux GOARCH=amd64 go build -o testapp
+          go test -v  .
           
   go13:
     runs-on: ubuntu-latest
@@ -68,23 +49,7 @@ jobs:
           cd aop
           go test -v -coverprofile cover.out .
 
-      - name: libs test
-        run: |
-          cd libs
-          for dir in * ; do cd  $dir; go mod tidy; go test -v; cd ..; done
-
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
         # with:
         #   files:*.gcov,cover.out
-          
-      - name: compile test mux apps
-        run: |
-          cd testapps/mux
-          GOOS=linux GOARCH=amd64 go mod tidy
-          GOOS=linux GOARCH=amd64 go build -o testapp
-      - name: compile test echo apps
-        run: |
-          cd testapps/echo
-          GOOS=linux GOARCH=amd64 go mod tidy
-          GOOS=linux GOARCH=amd64 go build -o testapp

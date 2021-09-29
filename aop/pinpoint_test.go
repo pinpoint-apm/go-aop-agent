@@ -17,6 +17,7 @@
 package aop
 
 import (
+	"os"
 	"runtime"
 	"testing"
 )
@@ -435,4 +436,22 @@ func TestAddHookP_CALL(t *testing.T) {
 		t.Fail()
 	}
 
+}
+
+func TestAgentDisable(t *testing.T) {
+	os.Setenv("FORCE_DISABLE_PINPOINT_AGENT", "True")
+
+	if err := AddHookP_CALL(callRaw, fakeRaw, hookRawTrampoline); err == nil {
+		t.Log("AddHookP_CALL failed")
+		t.Fail()
+	}
+
+	if err := AddHook(callRaw, fakeRaw, hookRawTrampoline); err == nil {
+		t.Log("AddHookP_CALL failed")
+		t.Fail()
+	}
+	if err := AddHookP_JMP(callRaw, fakeRaw, hookRawTrampoline); err == nil {
+		t.Log("AddHookP_CALL failed")
+		t.Fail()
+	}
 }

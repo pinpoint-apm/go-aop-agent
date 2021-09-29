@@ -150,6 +150,12 @@ func PinpointMiddleWare(next echo.HandlerFunc) echo.HandlerFunc {
 }
 
 func PinpointErrorHandler(originHandler func(e error, c echo.Context)) func(e error, c echo.Context) {
+	if common.AgentIsDisabled() {
+		return func(e error, c echo.Context) {
+			originHandler(e, c)
+		}
+	}
+
 	return func(e error, c echo.Context) {
 		originHandler(e, c)
 		if id, err := common.GetParentId(c.Request().Context()); err == nil {
