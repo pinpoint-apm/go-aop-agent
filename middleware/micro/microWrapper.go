@@ -7,7 +7,7 @@ import (
 	"github.com/pinpoint-apm/go-aop-agent/common"
 )
 
-func pinpointMiddleware(ctx context.Context, req server.Request, rsp interface{}) error {
+func pinpointMiddleware(ctx context.Context, req server.Request, rsp interface{}, originFn server.HandlerFunc) error {
 	traceId := common.Pinpoint_start_trace(common.ROOT_TRACE)
 	addClueFunc := func(key, value string) {
 		common.Pinpoint_add_clue(key, value, traceId, common.CurrentTraceLoc)
@@ -117,7 +117,7 @@ func pinpointMiddleware(ctx context.Context, req server.Request, rsp interface{}
 	}
 	addCluesFunc(common.PP_HTTP_METHOD, "9162")
 
-	err := fn(nCtx, req, rsp)
+	err := originFn(nCtx, req, rsp)
 	catchPanic = false
 	return err
 }
@@ -129,5 +129,7 @@ func PinpointHandle(fn server.HandlerFunc) server.HandlerFunc {
 			return fn(ctx, req, rsp)
 		}
 	}
-	return pinpointMiddleware
+	return func(ctx context.Context, req server.Request, rsp interface{}) error {
+		return pinpointMiddleware(ctx, req, rsp, fn)
+	}
 }
