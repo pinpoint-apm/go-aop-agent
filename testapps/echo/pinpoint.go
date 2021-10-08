@@ -24,6 +24,9 @@ import (
 	"github.com/pinpoint-apm/go-aop-agent/common"
 	_ "github.com/pinpoint-apm/go-aop-agent/libs/httpClient"
 	_ "github.com/pinpoint-apm/go-aop-agent/libs/mongo"
+	_ "github.com/pinpoint-apm/go-aop-agent/libs/redisv8"
+	_ "github.com/pinpoint-apm/go-aop-agent/libs/sql"
+	_ "github.com/pinpoint-apm/go-aop-agent/libs/transport"
 )
 
 func init() {
