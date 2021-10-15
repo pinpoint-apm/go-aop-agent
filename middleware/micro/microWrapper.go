@@ -5,6 +5,7 @@ import (
 
 	"github.com/micro/go-micro/v2/server"
 	"github.com/pinpoint-apm/go-aop-agent/common"
+	"google.golang.org/grpc/peer"
 )
 
 func pinpointMiddleware(ctx context.Context, req server.Request, rsp interface{}, originFn server.HandlerFunc) error {
@@ -21,24 +22,21 @@ func pinpointMiddleware(ctx context.Context, req server.Request, rsp interface{}
 		if catchPanic {
 			common.Pinpoint_mark_error("PinpointHandle found a panic! o_o ....", "", 0, traceId)
 		}
-
-		// if req.Response() != nil {
-		// 	common.Pinpoint_add_clues(common.PP_HTTP_STATUS_CODE, strconv.Itoa(c.Response().Status), id, common.CurrentTraceLoc)
-		// }
-
 		common.Pinpoint_end_trace(traceId)
-		// common.Logf("end trace:%d", id)
 	}()
 
-	// update context
-	nCtx := context.WithValue(ctx, common.TRACE_ID, traceId)
 	addClueFunc(common.PP_APP_NAME, common.Appname)
 	addClueFunc(common.PP_APP_ID, common.Appid)
 	addClueFunc(common.PP_INTERCEPTOR_NAME, "echo middleware request")
 
 	addClueFunc(common.PP_REQ_URI, req.Service())
 	addClueFunc(common.PP_REQ_SERVER, req.Service())
-	addClueFunc(common.PP_REQ_CLIENT, req.Endpoint())
+
+	if p, ok := peer.FromContext(ctx); ok {
+		//https://github.com/asim/go-micro/commit/d8e998ad85feac9288dd34dfb2dd75ce66bde6f4
+		addClueFunc(common.PP_REQ_CLIENT, p.Addr.String())
+	}
+
 	addClueFunc(common.PP_SERVER_TYPE, common.GOLANG)
 	common.Pinpoint_set_context(common.PP_SERVER_TYPE, common.GOLANG, traceId)
 
@@ -117,6 +115,8 @@ func pinpointMiddleware(ctx context.Context, req server.Request, rsp interface{}
 	}
 	addCluesFunc(common.PP_HTTP_METHOD, "9162")
 
+	// update context
+	nCtx := context.WithValue(ctx, common.TRACE_ID, traceId)
 	err := originFn(nCtx, req, rsp)
 	catchPanic = false
 	return err
