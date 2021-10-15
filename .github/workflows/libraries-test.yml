@@ -43,8 +43,3 @@ jobs:
             cd testapps/echo
             GOOS=linux GOARCH=amd64 go mod tidy
             GOOS=linux GOARCH=amd64 go build -o testapp
-        - uses: stefanzweifel/git-auto-commit-action@v4
-          with:
-            commit_message: Automated Change - Update go.sum
-            branch: ref-update-go-sum
-            file_pattern: libs/\*.sum middleware/\*.sum
