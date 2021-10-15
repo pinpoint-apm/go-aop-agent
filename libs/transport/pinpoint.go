@@ -46,19 +46,20 @@ func onBefore(parentId common.TraceIdType, req *http.Request) (common.TraceIdTyp
 
 func onEnd(id common.TraceIdType, response *http.Response, err *error) {
 	common.Logf("call onEnd")
-	// addClueFunc := func(key, value string) {
-	// 	common.Pinpoint_add_clue(key, value, id, common.CurrentTraceLoc)
-	// }
-
 	addClueSFunc := func(key, value string) {
 		common.Pinpoint_add_clues(key, value, id, common.CurrentTraceLoc)
 	}
 
-	// if value := common.Pinpoint_get_context(common.PP_NEXT_SPAN_ID, id); value != "" {
-	// 	addClueFunc(common.PP_NEXT_SPAN_ID, value)
-	// }
+	addClueFunc := func(key, value string) {
+		common.Pinpoint_add_clue(key, value, id, common.CurrentTraceLoc)
+	}
 
-	addClueSFunc(common.PP_HTTP_STATUS_CODE, response.Status)
+	if response != nil {
+		addClueSFunc(common.PP_HTTP_STATUS_CODE, response.Status)
+	} else {
+		addClueSFunc(common.PP_HTTP_STATUS_CODE, "500")
+		addClueFunc(common.PP_ADD_EXCEPTION, "response is nil")
+	}
 	common.Pinpoint_end_trace(id)
 }
 
