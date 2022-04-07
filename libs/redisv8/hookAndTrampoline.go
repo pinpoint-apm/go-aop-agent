@@ -28,17 +28,16 @@ import (
 	"github.com/pinpoint-apm/go-aop-agent/common"
 )
 
-var redisHost string
-
 func init() {
 	hook_common_func(redis.NewClient, hook_newclient, hook_newclient_trampoline)
 }
 
-type redisHook struct {
+type ppRedisHook struct {
 	redis.Hook
+	Addr string
 }
 
-func (redisHook) BeforeProcess(ctx context.Context, cmd redis.Cmder) (context.Context, error) {
+func (p *ppRedisHook) BeforeProcess(ctx context.Context, cmd redis.Cmder) (context.Context, error) {
 	common.Logf("call onBefore")
 	if parentId, err := common.GetParentId(ctx); err != nil {
 		common.Logf("parentId is not traceId type. Dropped")
@@ -50,16 +49,53 @@ func (redisHook) BeforeProcess(ctx context.Context, cmd redis.Cmder) (context.Co
 			common.Pinpoint_add_clue(key, value, id, common.CurrentTraceLoc)
 		}
 
+		// addClueSFunc := func(key, value string) {
+		// 	common.Pinpoint_add_clues(key, value, id, common.CurrentTraceLoc)
+		// }
+
 		addClueFunc(common.PP_INTERCEPTOR_NAME, fmt.Sprint(cmd.Args()[0]))
 		addClueFunc(common.PP_SERVER_TYPE, common.PP_REDIS)
-		addClueFunc(common.PP_DESTINATION, redisHost)
+		addClueFunc(common.PP_DESTINATION, p.Addr)
+		// addClueSFunc(common.PP_ARGS, cmd.String())
 
 		newCtx := context.WithValue(ctx, common.TRACE_ID, id)
 		return newCtx, nil
 	}
 }
 
-func (redisHook) AfterProcess(ctx context.Context, cmd redis.Cmder) error {
+func (p *ppRedisHook) AfterProcess(ctx context.Context, cmd redis.Cmder) error {
+	id, err := common.GetParentId(ctx)
+	addClueSFunc := func(key, value string) {
+		common.Pinpoint_add_clues(key, value, id, common.CurrentTraceLoc)
+	}
+	addClueSFunc(common.PP_RETURN, cmd.String())
+
+	common.Pinpoint_end_trace(id)
+	return err
+}
+
+func (p *ppRedisHook) BeforeProcessPipeline(ctx context.Context, cmds []redis.Cmder) (context.Context, error) {
+	common.Logf("call BeforeProcessPipeline")
+	if parentId, err := common.GetParentId(ctx); err != nil {
+		common.Logf("parentId is not traceId type. Dropped")
+		return ctx, nil
+	} else {
+		id := common.Pinpoint_start_trace(parentId)
+
+		addClueFunc := func(key, value string) {
+			common.Pinpoint_add_clue(key, value, id, common.CurrentTraceLoc)
+		}
+
+		addClueFunc(common.PP_INTERCEPTOR_NAME, "(*redis).Pipeline")
+		addClueFunc(common.PP_SERVER_TYPE, common.PP_REDIS)
+		addClueFunc(common.PP_DESTINATION, p.Addr)
+
+		newCtx := context.WithValue(ctx, common.TRACE_ID, id)
+		return newCtx, nil
+	}
+}
+
+func (p *ppRedisHook) AfterProcessPipeline(ctx context.Context, cmds []redis.Cmder) error {
 	id, err := common.GetParentId(ctx)
 	common.Pinpoint_end_trace(id)
 	return err
@@ -74,8 +110,9 @@ func hook_newclient_trampoline(opt *redis.Options) *redis.Client {
 //go:noinline
 func hook_newclient(opt *redis.Options) *redis.Client {
 	c := hook_newclient_trampoline(opt)
-	c.AddHook(redisHook{})
-	redisHost = c.String()
+	ppHook := &ppRedisHook{Addr: opt.Addr}
+	c.AddHook(ppHook)
+
 	return c
 }
 
