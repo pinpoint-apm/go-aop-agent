@@ -129,10 +129,11 @@ const (
 )
 
 /////////////////////////////////////////
+type TRACE_ID_TYPE string
 
 const (
-	ROOT_TRACE = 0
-	TRACE_ID   = "trace_id"
+	ROOT_TRACE               = 0
+	TRACE_ID   TRACE_ID_TYPE = "trace_id"
 )
 
 var (
