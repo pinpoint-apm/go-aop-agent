@@ -259,7 +259,8 @@ void place_safe_nop_inst(BYTE* p,int size)
         *(p+1) = NOP_3[1];
         *(p+2) = NOP_3[2];
     }else if(size%2 == 0){
-        for(int i =0;i<size;)
+        int i=0;
+        for(;i<size;)
         {
             *(p+i) = NOP_2[0];
             *(p+i+1) = NOP_2[1];
