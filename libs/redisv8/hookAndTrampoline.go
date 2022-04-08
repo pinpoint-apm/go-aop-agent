@@ -33,7 +33,6 @@ func init() {
 }
 
 type ppRedisHook struct {
-	redis.Hook
 	Addr string
 }
 
@@ -65,13 +64,22 @@ func (p *ppRedisHook) BeforeProcess(ctx context.Context, cmd redis.Cmder) (conte
 
 func (p *ppRedisHook) AfterProcess(ctx context.Context, cmd redis.Cmder) error {
 	id, err := common.GetParentId(ctx)
+	if err != nil {
+		common.Logf("parentId is not traceId type. Dropped")
+		return nil
+	}
 	addClueSFunc := func(key, value string) {
 		common.Pinpoint_add_clues(key, value, id, common.CurrentTraceLoc)
 	}
+	addClueFunc := func(key, value string) {
+		common.Pinpoint_add_clue(key, value, id, common.CurrentTraceLoc)
+	}
 	addClueSFunc(common.PP_RETURN, cmd.String())
-
+	if cmd.Err() != nil {
+		addClueFunc(common.PP_ADD_EXCEPTION, cmd.Err().Error())
+	}
 	common.Pinpoint_end_trace(id)
-	return err
+	return nil
 }
 
 func (p *ppRedisHook) BeforeProcessPipeline(ctx context.Context, cmds []redis.Cmder) (context.Context, error) {
@@ -97,8 +105,21 @@ func (p *ppRedisHook) BeforeProcessPipeline(ctx context.Context, cmds []redis.Cm
 
 func (p *ppRedisHook) AfterProcessPipeline(ctx context.Context, cmds []redis.Cmder) error {
 	id, err := common.GetParentId(ctx)
+	if err != nil {
+		common.Logf("parentId is not traceId type. Dropped")
+		return nil
+	}
+	addClueFunc := func(key, value string) {
+		common.Pinpoint_add_clue(key, value, id, common.CurrentTraceLoc)
+	}
+	for _, cmd := range cmds {
+		if cmd.Err() != nil {
+			addClueFunc(common.PP_ADD_EXCEPTION, cmd.Err().Error())
+			break // only catch the first error
+		}
+	}
 	common.Pinpoint_end_trace(id)
-	return err
+	return nil
 }
 
 // /////////////////////redis.NewClient.set///////////////////////////
@@ -110,7 +131,8 @@ func hook_newclient_trampoline(opt *redis.Options) *redis.Client {
 //go:noinline
 func hook_newclient(opt *redis.Options) *redis.Client {
 	c := hook_newclient_trampoline(opt)
-	ppHook := &ppRedisHook{Addr: opt.Addr}
+	addr := fmt.Sprintf("redis:%s(%d)", opt.Addr, opt.DB)
+	ppHook := &ppRedisHook{Addr: addr}
 	c.AddHook(ppHook)
 
 	return c
