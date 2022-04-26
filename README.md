@@ -5,7 +5,7 @@
 
 Dependency|Version| More
 ---|----|----
-GO | go1.13+ | 
+GO | go1.13+ | *go1.18 not support*
 cpu arch | amd64(x86_64)|
 *nux| | 
 

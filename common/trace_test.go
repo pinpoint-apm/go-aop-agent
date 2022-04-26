@@ -55,6 +55,6 @@ func TestCallsth(t *testing.T) {
 		callSth(ctx, 19, "xxx")
 	}
 
-	PinAsTranscation(&trans, pile, ctx)
+	PinTranscation(&trans, pile, ctx)
 
 }
