@@ -17,6 +17,7 @@ package common
 
 import (
 	"context"
+	"fmt"
 )
 
 type PinTransactionHeader struct {
@@ -30,13 +31,56 @@ type PinTransactionHeader struct {
 	Err        error
 }
 
+type DeferFunc func(error, ...interface{})
+
+func PinCallFunc(ctx context.Context, name string, args ...interface{}) (context.Context, DeferFunc) {
+	emptyPinFunc := func(err error, ret ...interface{}) {
+
+	}
+
+	if AgentIsDisabled() {
+		return ctx, emptyPinFunc
+	}
+
+	if parentId, err := GetParentId(ctx); err != nil ||
+		Pinpoint_get_context(PP_HEADER_PINPOINT_SAMPLED, parentId) == PP_NOT_SAMPLED {
+		return ctx, emptyPinFunc
+	} else {
+
+		id := Pinpoint_start_trace(parentId)
+		nctx := context.WithValue(ctx, TRACE_ID, id)
+		addClueFunc := func(key, value string) {
+			Pinpoint_add_clue(key, value, id, CurrentTraceLoc)
+		}
+		addClueSFunc := func(key, value string) {
+			Pinpoint_add_clues(key, value, id, CurrentTraceLoc)
+		}
+		addClueFunc(PP_SERVER_TYPE, PP_METHOD_CALL)
+		addClueFunc(PP_INTERCEPTOR_NAME, name)
+		addClueSFunc(PP_ARGS, fmt.Sprint(args...))
+
+		deferfunc := func(err error, ret ...interface{}) {
+			if err != nil {
+				addClueFunc(PP_ADD_EXCEPTION, err.Error())
+			}
+
+			if len(ret) > 0 {
+				addClueSFunc(PP_RETURN, fmt.Sprint(ret...))
+			}
+
+			Pinpoint_end_trace(id)
+		}
+		return nctx, deferfunc
+	}
+}
+
 type FuncPile func(context.Context)
 
 func GenerateTid() string {
 	return Pinpoint_gen_tid()
 }
 
-func PinAsTranscation(header *PinTransactionHeader, pile FuncPile, ctx context.Context) {
+func PinTranscation(header *PinTransactionHeader, pile FuncPile, ctx context.Context) {
 
 	catchPanic := true
 	if AgentIsDisabled() {
@@ -63,11 +107,19 @@ func PinAsTranscation(header *PinTransactionHeader, pile FuncPile, ctx context.C
 		addClueFunc(PP_REQ_SERVER, header.Host)
 		addClueFunc(PP_REQ_CLIENT, header.RemoteAddr)
 		addClueFunc(PP_SERVER_TYPE, GOLANG)
-		addClueFunc(PP_PARENT_TYPE, header.ParentType)
-		addClueFunc(PP_PARENT_NAME, header.ParentName)
+
+		if header.ParentType != "" {
+			addClueFunc(PP_PARENT_TYPE, header.ParentType)
+		}
+
+		if header.ParentName != "" {
+			addClueFunc(PP_PARENT_NAME, header.ParentName)
+		}
+
 		if header.ParentHost != "" {
 			addClueFunc(PP_PARENT_HOST, header.ParentHost)
 		}
+
 		var tid string
 
 		if header.ParentTid != "" {
