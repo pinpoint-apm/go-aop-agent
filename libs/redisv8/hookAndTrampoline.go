@@ -74,7 +74,13 @@ func (p *ppRedisHook) AfterProcess(ctx context.Context, cmd redis.Cmder) error {
 	addClueFunc := func(key, value string) {
 		common.Pinpoint_add_clue(key, value, id, common.CurrentTraceLoc)
 	}
-	addClueSFunc(common.PP_RETURN, cmd.String())
+	cmdStr := cmd.String()
+	cmdSize := len(cmdStr)
+	if cmdSize > 100 {
+		cmdSize = 100
+	}
+	addClueSFunc(common.PP_RETURN, cmdStr[:cmdSize])
+
 	if cmd.Err() != nil {
 		addClueFunc(common.PP_ADD_EXCEPTION, cmd.Err().Error())
 	}

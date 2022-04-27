@@ -31,10 +31,10 @@ type PinTransactionHeader struct {
 	Err        error
 }
 
-type DeferFunc func(error, ...interface{})
+type DeferFunc func(*error, ...interface{})
 
 func PinCallFunc(ctx context.Context, name string, args ...interface{}) (context.Context, DeferFunc) {
-	emptyPinFunc := func(err error, ret ...interface{}) {
+	emptyPinFunc := func(err *error, ret ...interface{}) {
 
 	}
 
@@ -59,9 +59,9 @@ func PinCallFunc(ctx context.Context, name string, args ...interface{}) (context
 		addClueFunc(PP_INTERCEPTOR_NAME, name)
 		addClueSFunc(PP_ARGS, fmt.Sprint(args...))
 
-		deferfunc := func(err error, ret ...interface{}) {
-			if err != nil {
-				addClueFunc(PP_ADD_EXCEPTION, err.Error())
+		deferfunc := func(err *error, ret ...interface{}) {
+			if err != nil && *err != nil {
+				addClueFunc(PP_ADD_EXCEPTION, (*err).Error())
 			}
 
 			if len(ret) > 0 {
@@ -107,6 +107,7 @@ func PinTranscation(header *PinTransactionHeader, pile FuncPile, ctx context.Con
 		addClueFunc(PP_REQ_SERVER, header.Host)
 		addClueFunc(PP_REQ_CLIENT, header.RemoteAddr)
 		addClueFunc(PP_SERVER_TYPE, GOLANG)
+		Pinpoint_set_context(PP_HEADER_PINPOINT_SAMPLED, "s1", id)
 
 		if header.ParentType != "" {
 			addClueFunc(PP_PARENT_TYPE, header.ParentType)
