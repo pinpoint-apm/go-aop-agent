@@ -224,6 +224,13 @@ func Pinpoint_start_trace(id TraceIdType) TraceIdType {
 	return TraceIdType(C.pinpoint_start_trace(C.int(id)))
 }
 
+func Pinpoint_wake_trace(id TraceIdType) error {
+	if C.pinpoint_wake_trace(C.int(id)) != 0 {
+		return errors.New("wake trace failed")
+	}
+	return nil
+}
+
 /**
  * @description: End trace node(id) or trace tree(If current id the root node)
  * @param {TraceIdType} id
@@ -292,6 +299,24 @@ func Pinpoint_get_context(key string, id TraceIdType) string {
 		return ""
 	} else {
 		return C.GoString(cvalue)
+	}
+}
+
+func Pinpoint_set_int_context(key string, value int64, id TraceIdType) {
+	ckey := C.CString(key)
+	defer C.free(unsafe.Pointer(ckey))
+	C.pinpoint_set_context_long(C.int(id), ckey, C.long(value))
+}
+
+func Pinpoint_get_int_context(key string, id TraceIdType) (int64, error) {
+	ckey := C.CString(key)
+	defer C.free(unsafe.Pointer(ckey))
+	var value C.long
+
+	if C.pinpoint_get_context_long(C.int(id), ckey, &value) == 0 {
+		return int64(value), nil
+	} else {
+		return 0, errors.New("not found")
 	}
 }
 
