@@ -61,11 +61,21 @@ func TestAgentApi(t *testing.T) {
 	Pinpoint_set_context("x", "xx", traceId3)
 
 	Pinpoint_set_context("x", "xx", traceIdRoot)
-
 	if Pinpoint_get_context("x", traceId3) != "xx" {
 		t.Log("Pinpoint_get_context traceId3 failed")
 		t.Log(Pinpoint_get_context("x", traceId3))
 		t.Fail()
+	}
+
+	Pinpoint_set_int_context("intxx", 1025, traceIdRoot)
+	if v, err := Pinpoint_get_int_context("intxx", traceId3); err != nil {
+		t.Error(err)
+	} else if v != 1025 {
+		t.Error("Pinpoint_get_int_context 1025 failed")
+	}
+
+	if _, err := Pinpoint_get_int_context("intxx", 0); err == nil {
+		t.Error("err should not be nil")
 	}
 
 	Pinpoint_end_trace(traceId3)
@@ -75,6 +85,9 @@ func TestAgentApi(t *testing.T) {
 		t.Fail()
 	}
 	Pinpoint_mark_error("xx", "xxx", 0, traceId3)
+	Pinpoint_end_trace(traceId2)
+
+	Pinpoint_wake_trace(traceId2)
 	Pinpoint_end_trace(traceId2)
 
 	if Pinpoint_get_context("x", traceId1) != "xx" {

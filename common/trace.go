@@ -30,11 +30,56 @@ type PinTransactionHeader struct {
 	ParentTid  string
 	Err        error
 }
+type DeferFunc func(*error, ...interface{})
 
-type DeferFunc func(error, ...interface{})
+/**
+ * PinFuncSum profile cumulative pefermance function
+ * @param ctx context.Context
+ */
+func PinFuncSum(ctx context.Context, name string, args ...interface{}) (context.Context, DeferFunc) {
+	emptyPinFunc := func(err *error, ret ...interface{}) {
+	}
 
-func PinCallFunc(ctx context.Context, name string, args ...interface{}) (context.Context, DeferFunc) {
-	emptyPinFunc := func(err error, ret ...interface{}) {
+	if AgentIsDisabled() {
+		return ctx, emptyPinFunc
+	}
+
+	if parentId, err := GetParentId(ctx); err != nil ||
+		Pinpoint_get_context(PP_HEADER_PINPOINT_SAMPLED, parentId) == PP_NOT_SAMPLED {
+		return ctx, emptyPinFunc
+	} else {
+		var id TraceIdType
+		var nctx context.Context
+		key := "[sum]" + name
+		if v, err := Pinpoint_get_int_context(key, parentId); err == nil {
+			// found v
+			id = TraceIdType(v)
+			Pinpoint_wake_trace(id)
+			nctx = ctx
+		} else {
+			id = Pinpoint_start_trace(parentId)
+			Pinpoint_set_int_context(key, int64(id), id)
+			nctx = context.WithValue(ctx, TRACE_ID, id)
+			Pinpoint_add_clue(PP_SERVER_TYPE, PP_METHOD_CALL, id, CurrentTraceLoc)
+			Pinpoint_add_clue(PP_INTERCEPTOR_NAME, key, id, CurrentTraceLoc)
+		}
+
+		deferfunc := func(err *error, ret ...interface{}) {
+			if err != nil && *err != nil {
+				Pinpoint_add_clue(PP_ADD_EXCEPTION, (*err).Error(), id, CurrentTraceLoc)
+			}
+
+			Pinpoint_end_trace(id)
+		}
+		return nctx, deferfunc
+	}
+}
+
+/**
+ * PinFuncOnce profile  function once
+ */
+func PinFuncOnce(ctx context.Context, name string, args ...interface{}) (context.Context, DeferFunc) {
+	emptyPinFunc := func(err *error, ret ...interface{}) {
 
 	}
 
@@ -59,9 +104,9 @@ func PinCallFunc(ctx context.Context, name string, args ...interface{}) (context
 		addClueFunc(PP_INTERCEPTOR_NAME, name)
 		addClueSFunc(PP_ARGS, fmt.Sprint(args...))
 
-		deferfunc := func(err error, ret ...interface{}) {
-			if err != nil {
-				addClueFunc(PP_ADD_EXCEPTION, err.Error())
+		deferfunc := func(err *error, ret ...interface{}) {
+			if err != nil && *err != nil {
+				addClueFunc(PP_ADD_EXCEPTION, (*err).Error())
 			}
 
 			if len(ret) > 0 {
@@ -107,6 +152,7 @@ func PinTranscation(header *PinTransactionHeader, pile FuncPile, ctx context.Con
 		addClueFunc(PP_REQ_SERVER, header.Host)
 		addClueFunc(PP_REQ_CLIENT, header.RemoteAddr)
 		addClueFunc(PP_SERVER_TYPE, GOLANG)
+		Pinpoint_set_context(PP_HEADER_PINPOINT_SAMPLED, "s1", id)
 
 		if header.ParentType != "" {
 			addClueFunc(PP_PARENT_TYPE, header.ParentType)
