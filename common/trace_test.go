@@ -17,12 +17,13 @@ package common
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"testing"
 	"time"
 )
 
-func init() {
+func init_test() {
 	SetLogCallBack(log.Printf)
 	init_pinpoint()
 }
@@ -33,15 +34,26 @@ func init_pinpoint() {
 	Pinpoint_set_trace_limit(-1)
 	Appname = "test-go-echo"
 	Appid = "test-go-echo-id"
+	fmt.Println("----------------------------")
+}
+
+func httpclient(ctx context.Context) {
+	_, deferfun := PinHttpClientFunc(ctx, "userHttpclient", "http://www.naver.com1/index.html")
+	ret := make([]string, 1)
+	defer deferfun(nil, ret)
+	ret[0] = "success"
 }
 
 func callSth(ctx context.Context, a int, b string) int {
 	// do something
 	time.Sleep(1 * time.Second)
+	// call userhttclient
+	httpclient(ctx)
 	return 10
 }
 
 func TestCallsth(t *testing.T) {
+	init_test()
 	ctx := context.Background()
 	trans := PinTransactionHeader{
 		Url:        "/xxx",
@@ -56,5 +68,4 @@ func TestCallsth(t *testing.T) {
 	}
 
 	PinTranscation(&trans, pile, ctx)
-
 }

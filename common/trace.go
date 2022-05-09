@@ -18,6 +18,7 @@ package common
 import (
 	"context"
 	"fmt"
+	"net/url"
 )
 
 type PinTransactionHeader struct {
@@ -75,13 +76,12 @@ func PinFuncSum(ctx context.Context, name string, args ...interface{}) (context.
 	}
 }
 
+var emptyPinFunc = func(err *error, ret ...interface{}) {}
+
 /**
  * PinFuncOnce profile  function once
  */
 func PinFuncOnce(ctx context.Context, name string, args ...interface{}) (context.Context, DeferFunc) {
-	emptyPinFunc := func(err *error, ret ...interface{}) {
-
-	}
 
 	if AgentIsDisabled() {
 		return ctx, emptyPinFunc
@@ -201,4 +201,45 @@ CALL_PILE:
 
 func GetAppName() string {
 	return Appname
+}
+
+func PinHttpClientFunc(ctx context.Context, name, remoteUrl string, args ...interface{}) (context.Context, DeferFunc) {
+	if AgentIsDisabled() {
+		return ctx, emptyPinFunc
+	}
+
+	if parentId, err := GetParentId(ctx); err != nil ||
+		Pinpoint_get_context(PP_HEADER_PINPOINT_SAMPLED, parentId) == PP_NOT_SAMPLED {
+		return ctx, emptyPinFunc
+	} else {
+
+		id := Pinpoint_start_trace(parentId)
+		nctx := context.WithValue(ctx, TRACE_ID, id)
+		addClueFunc := func(key, value string) {
+			Pinpoint_add_clue(key, value, id, CurrentTraceLoc)
+		}
+		addClueSFunc := func(key, value string) {
+			Pinpoint_add_clues(key, value, id, CurrentTraceLoc)
+		}
+		addClueFunc(PP_SERVER_TYPE, PP_REMOTE_METHOD)
+		addClueFunc(PP_INTERCEPTOR_NAME, name)
+		u, err := url.Parse(remoteUrl)
+		if err == nil {
+			addClueSFunc(PP_HTTP_URL, u.Path)
+			addClueFunc(PP_DESTINATION, u.Host)
+		}
+
+		deferfunc := func(err *error, ret ...interface{}) {
+			if err != nil && *err != nil {
+				addClueFunc(PP_ADD_EXCEPTION, (*err).Error())
+			}
+
+			if len(ret) > 0 {
+				addClueSFunc(PP_RETURN, fmt.Sprint(ret...))
+			}
+
+			Pinpoint_end_trace(id)
+		}
+		return nctx, deferfunc
+	}
 }
