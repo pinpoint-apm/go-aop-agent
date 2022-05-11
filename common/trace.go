@@ -228,7 +228,7 @@ func PinHttpClientFunc(ctx context.Context, name, remoteUrl string, args ...inte
 			addClueSFunc(PP_HTTP_URL, u.Path)
 			addClueFunc(PP_DESTINATION, u.Host)
 		}
-
+		addClueSFunc(PP_ARGS, remoteUrl)
 		deferfunc := func(err *error, ret ...interface{}) {
 			if err != nil && *err != nil {
 				addClueFunc(PP_ADD_EXCEPTION, (*err).Error())
