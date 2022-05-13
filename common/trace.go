@@ -223,12 +223,12 @@ func PinHttpClientFunc(ctx context.Context, name, remoteUrl string, args ...inte
 		}
 		addClueFunc(PP_SERVER_TYPE, PP_REMOTE_METHOD)
 		addClueFunc(PP_INTERCEPTOR_NAME, name)
+		addClueSFunc(PP_HTTP_URL, remoteUrl)
 		u, err := url.Parse(remoteUrl)
 		if err == nil {
-			addClueSFunc(PP_HTTP_URL, u.Path)
 			addClueFunc(PP_DESTINATION, u.Host)
 		}
-		addClueSFunc(PP_ARGS, remoteUrl)
+		// addClueSFunc(PP_ARGS, remoteUrl)
 		deferfunc := func(err *error, ret ...interface{}) {
 			if err != nil && *err != nil {
 				addClueFunc(PP_ADD_EXCEPTION, (*err).Error())
