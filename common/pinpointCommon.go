@@ -32,14 +32,16 @@ import (
 	"unsafe"
 )
 
-type TraceIdType int32
+// type TraceIdType int32
 
 /////////////////////////////////////////
-type LocationType int32
+// type LocationType int32
+type LocationType C.E_NODE_LOC
+type TraceIdType C.NodeID
 
 const (
-	CurrentTraceLoc LocationType = 0x0
-	RootTraceLoc    LocationType = 0x1
+	CurrentTraceLoc LocationType = C.E_LOC_CURRENT
+	RootTraceLoc    LocationType = C.E_LOC_ROOT
 )
 
 /////////////////////////////////////////
@@ -221,11 +223,11 @@ func Pinpoint_set_collect_agent_host(host string) {
  * @return {*}
  */
 func Pinpoint_start_trace(id TraceIdType) TraceIdType {
-	return TraceIdType(C.pinpoint_start_trace(C.int(id)))
+	return TraceIdType(C.pinpoint_start_trace(C.NodeID(id)))
 }
 
 func Pinpoint_wake_trace(id TraceIdType) error {
-	if C.pinpoint_wake_trace(C.int(id)) != 0 {
+	if C.pinpoint_wake_trace(C.NodeID(id)) != 0 {
 		return errors.New("wake trace failed")
 	}
 	return nil
@@ -237,7 +239,7 @@ func Pinpoint_wake_trace(id TraceIdType) error {
  * @return {*}
  */
 func Pinpoint_end_trace(id TraceIdType) TraceIdType {
-	return TraceIdType(C.pinpoint_end_trace(C.int(id)))
+	return TraceIdType(C.pinpoint_end_trace(C.NodeID(id)))
 }
 
 /**
@@ -252,7 +254,7 @@ func Pinpoint_add_clue(key, value string, id TraceIdType, loc LocationType) {
 	cvalue := C.CString(value)
 	defer C.free(unsafe.Pointer(ckey))
 	defer C.free(unsafe.Pointer(cvalue))
-	C.pinpoint_add_clue(C.int(id), ckey, cvalue, C.E_NODE_LOC(C.E_CURRENT_LOC))
+	C.pinpoint_add_clue(C.NodeID(id), ckey, cvalue, C.E_NODE_LOC(C.E_LOC_CURRENT))
 }
 
 /**
@@ -261,7 +263,7 @@ func Pinpoint_add_clue(key, value string, id TraceIdType, loc LocationType) {
  * @return {*}
  */
 func Pinpoint_trace_is_root(id TraceIdType) bool {
-	if C.pinpoint_trace_is_root(C.int(id)) == 1 {
+	if C.pinpoint_trace_is_root(C.NodeID(id)) == 1 {
 		return true
 	} else {
 		return false
@@ -281,7 +283,7 @@ func Pinpoint_set_context(key, value string, id TraceIdType) {
 	cvalue := C.CString(value)
 	defer C.free(unsafe.Pointer(ckey))
 	defer C.free(unsafe.Pointer(cvalue))
-	C.pinpoint_set_context_key(C.int(id), ckey, cvalue)
+	C.pinpoint_set_context_key(C.NodeID(id), ckey, cvalue)
 
 }
 
@@ -294,7 +296,7 @@ func Pinpoint_set_context(key, value string, id TraceIdType) {
 func Pinpoint_get_context(key string, id TraceIdType) string {
 	ckey := C.CString(key)
 	defer C.free(unsafe.Pointer(ckey))
-	cvalue := C.pinpoint_get_context_key(C.int(id), ckey)
+	cvalue := C.pinpoint_get_context_key(C.NodeID(id), ckey)
 	if cvalue == nil {
 		return ""
 	} else {
@@ -305,7 +307,7 @@ func Pinpoint_get_context(key string, id TraceIdType) string {
 func Pinpoint_set_int_context(key string, value int64, id TraceIdType) {
 	ckey := C.CString(key)
 	defer C.free(unsafe.Pointer(ckey))
-	C.pinpoint_set_context_long(C.int(id), ckey, C.long(value))
+	C.pinpoint_set_context_long(C.NodeID(id), ckey, C.long(value))
 }
 
 func Pinpoint_get_int_context(key string, id TraceIdType) (int64, error) {
@@ -313,7 +315,7 @@ func Pinpoint_get_int_context(key string, id TraceIdType) (int64, error) {
 	defer C.free(unsafe.Pointer(ckey))
 	var value C.long
 
-	if C.pinpoint_get_context_long(C.int(id), ckey, &value) == 0 {
+	if C.pinpoint_get_context_long(C.NodeID(id), ckey, &value) == 0 {
 		return int64(value), nil
 	} else {
 		return 0, errors.New("not found")
@@ -333,7 +335,7 @@ func Pinpoint_add_clues(key, value string, id TraceIdType, loc LocationType) {
 	cvalue := C.CString(value)
 	defer C.free(unsafe.Pointer(ckey))
 	defer C.free(unsafe.Pointer(cvalue))
-	C.pinpoint_add_clues(C.int(id), ckey, cvalue, C.E_NODE_LOC(C.E_CURRENT_LOC))
+	C.pinpoint_add_clues(C.NodeID(id), ckey, cvalue, C.E_NODE_LOC(C.E_LOC_CURRENT))
 }
 
 /**
@@ -376,7 +378,7 @@ func Pinpoint_mark_error(emsg, error_filename string, error_lineno uint32, id Tr
 	msg := C.CString(emsg)
 	file_name := C.CString(error_filename)
 	lineno := C.uint(error_lineno)
-	C.catch_error(C.int(id), msg, file_name, lineno)
+	C.catch_error(C.NodeID(id), msg, file_name, lineno)
 }
 
 /**
@@ -395,7 +397,7 @@ func Pinpoint_start_time() int64 {
  * @return {*}
  */
 func Pinpoint_drop_trace(id TraceIdType) {
-	C.mark_current_trace_status(C.int(id), C.int(C.E_TRACE_BLOCK))
+	C.mark_current_trace_status(C.NodeID(id), C.int(C.E_TRACE_BLOCK))
 }
 
 /**
