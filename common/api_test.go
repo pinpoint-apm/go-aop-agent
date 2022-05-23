@@ -79,6 +79,10 @@ func TestAgentApi(t *testing.T) {
 	}
 
 	Pinpoint_end_trace(traceId3)
+	childId := Pinpoint_start_trace_opt(traceId2, "TraceMinTimeMs:23", "TraceOnlyException")
+	time.Sleep(time.Millisecond * 100)
+	Pinpoint_add_exception("test exception", childId)
+	Pinpoint_end_trace(childId)
 
 	if Pinpoint_get_context("x", traceId2) != "xx" {
 		t.Log("Pinpoint_get_context traceId2 failed")
