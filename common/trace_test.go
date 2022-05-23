@@ -17,6 +17,7 @@ package common
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"testing"
@@ -38,9 +39,22 @@ func init_pinpoint() {
 }
 
 func httpclient(ctx context.Context) {
-	_, deferfun := PinHttpClientFunc(ctx, "userHttpclient", "http://www.naver.com1/index.html")
+	_, deferfun := PinHttpClientFunc(ctx, "userHttpclient", "http://www.naver.com1/index.html", nil)
 	ret := make([]string, 1)
 	defer deferfun(nil, ret)
+	ret[0] = "success"
+}
+
+func httpclientV1(ctx context.Context) {
+	_, deferfun := PinHttpClientFunc(ctx, "userHttpclientV1", "http://www.naver.com1/index.html", []string{
+		"TraceMinTimeMs:23",
+		"TraceOnlyException",
+	})
+	ret := make([]string, 1)
+	var err error
+	defer deferfun(&err, ret)
+	time.Sleep(1 * time.Second)
+	err = errors.New("test exception")
 	ret[0] = "success"
 }
 
@@ -49,6 +63,7 @@ func callSth(ctx context.Context, a int, b string) int {
 	time.Sleep(1 * time.Second)
 	// call userhttclient
 	httpclient(ctx)
+	httpclientV1(ctx)
 	return 10
 }
 

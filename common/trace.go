@@ -203,7 +203,7 @@ func GetAppName() string {
 	return Appname
 }
 
-func PinHttpClientFunc(ctx context.Context, name, remoteUrl string, args ...interface{}) (context.Context, DeferFunc) {
+func PinHttpClientFunc(ctx context.Context, name, remoteUrl string, option []string, args ...interface{}) (context.Context, DeferFunc) {
 	if AgentIsDisabled() {
 		return ctx, emptyPinFunc
 	}
@@ -212,8 +212,13 @@ func PinHttpClientFunc(ctx context.Context, name, remoteUrl string, args ...inte
 		Pinpoint_get_context(PP_HEADER_PINPOINT_SAMPLED, parentId) == PP_NOT_SAMPLED {
 		return ctx, emptyPinFunc
 	} else {
+		var id TraceIdType
+		if option == nil {
+			id = Pinpoint_start_trace(parentId)
+		} else {
+			id = Pinpoint_start_trace_opt(parentId, option...)
+		}
 
-		id := Pinpoint_start_trace(parentId)
 		nctx := context.WithValue(ctx, TRACE_ID, id)
 		addClueFunc := func(key, value string) {
 			Pinpoint_add_clue(key, value, id, CurrentTraceLoc)
@@ -228,10 +233,10 @@ func PinHttpClientFunc(ctx context.Context, name, remoteUrl string, args ...inte
 		if err == nil {
 			addClueFunc(PP_DESTINATION, u.Host)
 		}
-		// addClueSFunc(PP_ARGS, remoteUrl)
+
 		deferfunc := func(err *error, ret ...interface{}) {
 			if err != nil && *err != nil {
-				addClueFunc(PP_ADD_EXCEPTION, (*err).Error())
+				Pinpoint_add_exception((*err).Error(), id)
 			}
 
 			if len(ret) > 0 {
