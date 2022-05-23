@@ -16,4 +16,4 @@
 
 package pinpoint
 
-const Version = "v1.0.3"
+const Version = "v1.0.5"
