@@ -20,6 +20,9 @@ package common
 // #include <pinpoint_common/common.h>
 // #include <string.h>
 //PPAgentT global_agent_info;
+// static NodeID pinpoint_start_trace_opt(NodeID parentId, const char *opt1 , const char* opt2 ){
+// return  pinpoint_start_traceV1(parentId,opt1,opt2,NULL);
+// }
 import "C"
 import (
 	"context"
@@ -224,6 +227,54 @@ func Pinpoint_set_collect_agent_host(host string) {
  */
 func Pinpoint_start_trace(id TraceIdType) TraceIdType {
 	return TraceIdType(C.pinpoint_start_trace(C.NodeID(id)))
+}
+
+/**
+ * @description: Create an new trace from parent with specified options
+	options only allow :
+		TraceMinTimeMs:23
+		TraceOnlyException
+ * @param {TraceIdType} id
+ * @return {*}
+*/
+func Pinpoint_start_trace_opt(id TraceIdType, opt ...string) TraceIdType {
+	// endOpt := (char*)0
+	switch len(opt) {
+	case 0:
+		return TraceIdType(C.pinpoint_start_trace_opt(C.NodeID(id), nil, nil))
+	case 1:
+		opt := C.CString(opt[0])
+		defer C.free(unsafe.Pointer(opt))
+		return TraceIdType(C.pinpoint_start_trace_opt(C.NodeID(id), opt, nil))
+	case 2:
+		opt1 := C.CString(opt[0])
+		defer C.free(unsafe.Pointer(opt1))
+		op2 := C.CString(opt[1])
+		defer C.free(unsafe.Pointer(op2))
+		return TraceIdType(C.pinpoint_start_trace_opt(C.NodeID(id), opt1, op2))
+	// case 3:
+	// 	opt1 := C.CString(opt[0])
+	// 	defer C.free(unsafe.Pointer(opt1))
+	// 	opt2 := C.CString(opt[1])
+	// 	defer C.free(unsafe.Pointer(opt2))
+	// 	opt3 := C.CString(opt[2])
+	// 	defer C.free(unsafe.Pointer(opt3))
+	// 	return TraceIdType(C.pinpoint_start_traceV1(C.NodeID(id), opt1, opt2, opt3, endOpt))
+	default:
+		panic("maximun 3 parameters")
+	}
+}
+
+/**
+ * @description: add exception information into current trace
+ * @param {TraceIdType} id
+
+ * @return {*}
+ */
+func Pinpoint_add_exception(expMsg string, id TraceIdType) {
+	exp := C.CString(expMsg)
+	defer C.free(unsafe.Pointer(exp))
+	C.pinpoint_add_exception(C.NodeID(id), exp)
 }
 
 func Pinpoint_wake_trace(id TraceIdType) error {
