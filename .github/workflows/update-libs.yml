@@ -4,6 +4,7 @@ on:
   pull_request_review:
     branches:
       - master
+  workflow_dispatch:
 
 jobs:
   updatelibs:
