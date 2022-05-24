@@ -1,0 +1,27 @@
+name: update-libs
+
+on:
+  # pull_request_review:
+  #   branches:
+  #     - master
+  workflow_dispatch:
+
+jobs:
+  updatelibs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.BOT }}
+      - uses: actions/setup-go@v3
+        with:
+          go-version: "1.16"
+      - name: update go mod under libs
+        run: |
+          cd libs
+          for dir in * ; do cd  $dir; go get github.com/pinpoint-apm/go-aop-agent@${{ github.sha }}; cd ..; done
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: update libs module to the latest commit
+          file_pattern: libs/*.mod libs/*.sum
