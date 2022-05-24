@@ -50,6 +50,8 @@ github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524040732-0d1cca2791da h1:To1
 github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524040732-0d1cca2791da/go.mod h1:oMQa5QELuu5W5CoR6TCQD1yNJ8XomTIWCuRclTBkjSc=
 github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524040852-d0455355a19f h1:nZnB9phjEEeyOxL3MDql3zVRlTOJk7mOyDSeKiPT/Z0=
 github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524040852-d0455355a19f/go.mod h1:oMQa5QELuu5W5CoR6TCQD1yNJ8XomTIWCuRclTBkjSc=
+github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524041015-fae9a3795be5 h1:0V5/ivFU3VZEyU4b2wqAYFRQOWSBlxhhZkRTfFOXVA4=
+github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524041015-fae9a3795be5/go.mod h1:oMQa5QELuu5W5CoR6TCQD1yNJ8XomTIWCuRclTBkjSc=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/segmentio/kafka-go v0.4.31 h1:+ImsrkJRju9j1D9U44rvRGRlpsI9GnwD8s9WTFagNLQ=
