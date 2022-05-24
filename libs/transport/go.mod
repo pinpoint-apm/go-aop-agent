@@ -2,4 +2,4 @@ module github.com/pinpoint-apm/go-aop-agent/libs/transport
 
 go 1.16
 
-require github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524040030-7d597010c2d2
+require github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524040152-905cf16c3617
