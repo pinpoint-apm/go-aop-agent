@@ -26,23 +26,23 @@ jobs:
           cd testapps/echo
           GOOS=linux GOARCH=amd64 go mod tidy
           GOOS=linux GOARCH=amd64 go build -o testapp
-  go13:
-    runs-on: ubuntu-latest
-    container: ghcr.io/pinpoint-apm/pinpoint-c-agent/golang-build-env-1.13:latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: libs test
-        run: |
-          cd libs
-          for dir in * ; do cd  $dir; go mod tidy; go test -v; cd ..; done
+  # go13:
+  #   runs-on: ubuntu-latest
+  #   container: ghcr.io/pinpoint-apm/pinpoint-c-agent/golang-build-env-1.13:latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: libs test
+  #       run: |
+  #         cd libs
+  #         for dir in * ; do cd  $dir; go mod tidy; go test -v; cd ..; done
 
-      - name: compile test mux apps
-        run: |
-          cd testapps/mux
-          GOOS=linux GOARCH=amd64 go mod tidy
-          GOOS=linux GOARCH=amd64 go build -o testapp
-      - name: compile test echo apps
-        run: |
-          cd testapps/echo
-          GOOS=linux GOARCH=amd64 go mod tidy
-          GOOS=linux GOARCH=amd64 go build -o testapp
+  #     - name: compile test mux apps
+  #       run: |
+  #         cd testapps/mux
+  #         GOOS=linux GOARCH=amd64 go mod tidy
+  #         GOOS=linux GOARCH=amd64 go build -o testapp
+  #     - name: compile test echo apps
+  #       run: |
+  #         cd testapps/echo
+  #         GOOS=linux GOARCH=amd64 go mod tidy
+  #         GOOS=linux GOARCH=amd64 go build -o testapp
