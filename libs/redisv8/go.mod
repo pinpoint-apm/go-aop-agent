@@ -4,5 +4,5 @@ go 1.16
 
 require (
 	github.com/go-redis/redis/v8 v8.11.0
-	github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524041322-3c05bfc9caf6
+	github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524041449-075e274b1dae
 )
