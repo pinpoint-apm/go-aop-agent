@@ -1,7 +1,11 @@
 name: CI build
 
-on: [push, pull_request, workflow_dispatch]
-
+on:
+  pull_request:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
 jobs:
   go16:
     runs-on: ubuntu-latest
@@ -45,6 +49,7 @@ jobs:
         with:
           commit_message: update libs module to the latest commit
           file_pattern: libs/*.mod libs/*.sum
+          commit_author: github-actions[bot]
 
   go13:
     runs-on: ubuntu-latest
