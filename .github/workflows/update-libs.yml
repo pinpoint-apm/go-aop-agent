@@ -8,7 +8,6 @@ on:
 jobs:
   updatelibs:
     runs-on: ubuntu-latest
-    needs: go16
     steps:
       - uses: actions/checkout@v2
         with:
