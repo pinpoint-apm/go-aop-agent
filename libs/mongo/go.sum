@@ -82,6 +82,8 @@ github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524035614-5b90b2c5bbb0 h1:kKG
 github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524035614-5b90b2c5bbb0/go.mod h1:oMQa5QELuu5W5CoR6TCQD1yNJ8XomTIWCuRclTBkjSc=
 github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524035732-29911df2df5d h1:LKY2lWo4oAMPpXTlqgLPzncI8plzdjuHYxPx/wNBpuc=
 github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524035732-29911df2df5d/go.mod h1:oMQa5QELuu5W5CoR6TCQD1yNJ8XomTIWCuRclTBkjSc=
+github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524035900-a694defea39d h1:sH9TSyxaczp8FLNvIgXlPYexeJHkj9ldDT+LP2lchj8=
+github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524035900-a694defea39d/go.mod h1:oMQa5QELuu5W5CoR6TCQD1yNJ8XomTIWCuRclTBkjSc=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
