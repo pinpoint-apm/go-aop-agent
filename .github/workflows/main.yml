@@ -1,4 +1,4 @@
-name: Test Aop,asm,common
+name: CI build
 
 on: [push, pull_request, workflow_dispatch]
 
@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: test asm-c
-        run : |
+        run: |
           cd asm && mkdir build && cd build && cmake .. && make
           ctest -T Test
       - name: test asm-go
@@ -24,14 +24,30 @@ jobs:
         run: |
           cd aop
           go test -v  .
-          
+
+  updatelibs:
+    runs-on: ubuntu-latest
+    container: ghcr.io/pinpoint-apm/pinpoint-c-agent/golang-build-env-1.16:latest
+    needs: go16
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@v2
+      - name: update go mod under libs
+        run: |
+          cd libs
+          for dir in * ; do cd  $dir; go get github.com/pinpoint-apm/go-aop-agent@${{ github.sha }}; cd ..; done
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: update libs module to the latest commit
+          file_pattern: libs/\*.mod libs/\*.sum
+
   go13:
     runs-on: ubuntu-latest
     container: ghcr.io/pinpoint-apm/pinpoint-c-agent/golang-build-env-1.13:latest
     steps:
       - uses: actions/checkout@v2
       - name: test asm-c
-        run : |
+        run: |
           cd asm && mkdir build && cd build && cmake ..
           make
           ctest -T Test
@@ -51,5 +67,3 @@ jobs:
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
-        # with:
-        #   files:*.gcov,cover.out
