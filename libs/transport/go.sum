@@ -44,3 +44,5 @@ github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524040852-d0455355a19f h1:nZn
 github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524040852-d0455355a19f/go.mod h1:oMQa5QELuu5W5CoR6TCQD1yNJ8XomTIWCuRclTBkjSc=
 github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524041015-fae9a3795be5 h1:0V5/ivFU3VZEyU4b2wqAYFRQOWSBlxhhZkRTfFOXVA4=
 github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524041015-fae9a3795be5/go.mod h1:oMQa5QELuu5W5CoR6TCQD1yNJ8XomTIWCuRclTBkjSc=
+github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524041146-dc96bc70c6ca h1:rPIJDeIar8gCKUOStw3ng6Dln4yjyCZrf+bPYRk5gHQ=
+github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524041146-dc96bc70c6ca/go.mod h1:oMQa5QELuu5W5CoR6TCQD1yNJ8XomTIWCuRclTBkjSc=
