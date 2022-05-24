@@ -3,6 +3,6 @@ module github.com/pinpoint-apm/go-aop-agent/libs/kafkago
 go 1.16
 
 require (
-	github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524035900-a694defea39d
+	github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524040030-7d597010c2d2
 	github.com/segmentio/kafka-go v0.4.31
 )
