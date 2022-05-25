@@ -31,15 +31,16 @@ type PinTransactionHeader struct {
 	ParentTid  string
 	Err        error
 }
+
 type DeferFunc func(*error, ...interface{})
+
+var emptyPinFunc = func(err *error, ret ...interface{}) {}
 
 /**
  * PinFuncSum profile cumulative pefermance function
  * @param ctx context.Context
  */
 func PinFuncSum(ctx context.Context, name string, args ...interface{}) (context.Context, DeferFunc) {
-	emptyPinFunc := func(err *error, ret ...interface{}) {
-	}
 
 	if AgentIsDisabled() {
 		return ctx, emptyPinFunc
@@ -59,6 +60,9 @@ func PinFuncSum(ctx context.Context, name string, args ...interface{}) (context.
 			nctx = ctx
 		} else {
 			id = Pinpoint_start_trace(parentId)
+			if id == TraceIdType(-1) {
+				return ctx, emptyPinFunc
+			}
 			Pinpoint_set_int_context(key, int64(id), id)
 			nctx = context.WithValue(ctx, TRACE_ID, id)
 			Pinpoint_add_clue(PP_SERVER_TYPE, PP_METHOD_CALL, id, CurrentTraceLoc)
@@ -76,8 +80,6 @@ func PinFuncSum(ctx context.Context, name string, args ...interface{}) (context.
 	}
 }
 
-var emptyPinFunc = func(err *error, ret ...interface{}) {}
-
 /**
  * PinFuncOnce profile  function once
  */
@@ -93,6 +95,9 @@ func PinFuncOnce(ctx context.Context, name string, args ...interface{}) (context
 	} else {
 
 		id := Pinpoint_start_trace(parentId)
+		if id == TraceIdType(-1) {
+			return ctx, emptyPinFunc
+		}
 		nctx := context.WithValue(ctx, TRACE_ID, id)
 		addClueFunc := func(key, value string) {
 			Pinpoint_add_clue(key, value, id, CurrentTraceLoc)
@@ -217,6 +222,10 @@ func PinHttpClientFunc(ctx context.Context, name, remoteUrl string, option []str
 			id = Pinpoint_start_trace(parentId)
 		} else {
 			id = Pinpoint_start_trace_opt(parentId, option...)
+		}
+
+		if id == TraceIdType(-1) {
+			return ctx, emptyPinFunc
 		}
 
 		nctx := context.WithValue(ctx, TRACE_ID, id)
