@@ -95,6 +95,8 @@ github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524052801-211339046fc0 h1:aLe
 github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524052801-211339046fc0/go.mod h1:oMQa5QELuu5W5CoR6TCQD1yNJ8XomTIWCuRclTBkjSc=
 github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524060456-ab2c66da535b h1:P6XzTuGF5FD4SFkzeIsnQw8hskEgU+ZVDSRyvo1OAvg=
 github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524060456-ab2c66da535b/go.mod h1:oMQa5QELuu5W5CoR6TCQD1yNJ8XomTIWCuRclTBkjSc=
+github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220525021258-2eef64bdf25c h1:FOGNG7hfTLDMoUaX7N09Xaa+/UUllHrK/TinuGObcNQ=
+github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220525021258-2eef64bdf25c/go.mod h1:oMQa5QELuu5W5CoR6TCQD1yNJ8XomTIWCuRclTBkjSc=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=

@@ -2,4 +2,4 @@ module github.com/pinpoint-apm/go-aop-agent/libs/httpClient
 
 go 1.16
 
-require github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220524060456-ab2c66da535b
+require github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220525021258-2eef64bdf25c
