@@ -107,6 +107,7 @@ func TestAgentApi(t *testing.T) {
 	}
 
 	Pinpoint_end_trace(traceIdRoot)
+	ShowAgentStatus()
 }
 
 func TestUniqId(t *testing.T) {
