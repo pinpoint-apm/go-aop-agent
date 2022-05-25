@@ -520,3 +520,11 @@ func AgentIsDisabled() bool {
 		return false
 	}
 }
+
+/**
+ * @description: print the internal status message
+ *
+ */
+func ShowAgentStatus() {
+	C.show_status()
+}
