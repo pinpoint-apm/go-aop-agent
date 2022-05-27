@@ -2,4 +2,4 @@ module github.com/pinpoint-apm/go-aop-agent/libs/sql
 
 go 1.16
 
-require github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220525094934-8587247b4b74
+require github.com/pinpoint-apm/go-aop-agent v1.0.5-0.20220527103200-bee0f37f2366
