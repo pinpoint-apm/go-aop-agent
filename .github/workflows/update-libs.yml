@@ -20,7 +20,7 @@ jobs:
       - name: update go mod under libs
         run: |
           cd libs
-          for dir in * ; do cd  $dir; go get github.com/pinpoint-apm/go-aop-agent@${{ github.sha }}; cd ..; done
+          for dir in * ; do cd  $dir; go get github.com/pinpoint-apm/go-aop-agent@${{ github.sha }}; go mod tidy; cd ..; done
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: update libs module to the latest commit
