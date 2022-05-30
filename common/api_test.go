@@ -188,3 +188,30 @@ func TestMissingCase(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func BenchmarkSetlong(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		root := Pinpoint_start_trace(ROOT_TRACE)
+		child := Pinpoint_start_trace(root)
+		Pinpoint_set_context("x", "xx", child)
+		v := Pinpoint_get_context("x", child)
+		if v != "xx" {
+			b.Fail()
+		}
+
+		Pinpoint_set_int_context("intxx", int64(i), child)
+		Pinpoint_set_int_context("intxx", int64(i)+1, child)
+		vi, error := Pinpoint_get_int_context("intxx", child)
+		if error != nil || vi != int64(i)+1 {
+			b.Fail()
+		}
+
+		_, error = Pinpoint_get_int_context("intxx2", child)
+		if error == nil {
+			b.Fail()
+		}
+		Pinpoint_end_trace(child)
+		Pinpoint_end_trace(root)
+	}
+
+}

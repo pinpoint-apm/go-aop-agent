@@ -347,11 +347,13 @@ func Pinpoint_set_context(key, value string, id TraceIdType) {
 func Pinpoint_get_context(key string, id TraceIdType) string {
 	ckey := C.CString(key)
 	defer C.free(unsafe.Pointer(ckey))
-	cvalue := C.pinpoint_get_context_key(C.NodeID(id), ckey)
-	if cvalue == nil {
+	buf := make([]byte, 1024)
+
+	ret := C.pinpoint_get_context_key(C.NodeID(id), ckey, (*C.char)(unsafe.Pointer(&buf[0])), C.int(len(buf)))
+	if ret <= 0 {
 		return ""
 	} else {
-		return C.GoString(cvalue)
+		return string(buf[:ret])
 	}
 }
 
