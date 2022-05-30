@@ -58,12 +58,28 @@ func httpclientV1(ctx context.Context) {
 	ret[0] = "success"
 }
 
+func callSum(ctx context.Context) {
+	_, deferfun := PinFuncSum(ctx, "callSum")
+	defer deferfun(nil)
+
+}
+
+func callOnce(ctx context.Context) {
+	_, deferfun := PinFuncOnce(ctx, "callOnce")
+	defer deferfun(nil)
+
+}
+
 func callSth(ctx context.Context, a int, b string) int {
 	// do something
 	time.Sleep(1 * time.Second)
 	// call userhttclient
 	httpclient(ctx)
 	httpclientV1(ctx)
+	for i := 0; i < 1000; i++ {
+		callSum(ctx)
+	}
+	callOnce(ctx)
 	return 10
 }
 

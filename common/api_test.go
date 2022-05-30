@@ -67,6 +67,12 @@ func TestAgentApi(t *testing.T) {
 		t.Fail()
 	}
 
+	if Pinpoint_get_context("x1", traceId3) == "xx" {
+		t.Log("Pinpoint_get_context traceId3 failed")
+		t.Log(Pinpoint_get_context("x", traceId3))
+		t.Fail()
+	}
+
 	Pinpoint_set_int_context("intxx", 1025, traceIdRoot)
 	if v, err := Pinpoint_get_int_context("intxx", traceId3); err != nil {
 		t.Error(err)
