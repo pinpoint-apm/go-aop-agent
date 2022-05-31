@@ -23,12 +23,12 @@ package common
 // static NodeID pinpoint_start_trace_opt(NodeID parentId, const char *opt1 , const char* opt2 ){
 // return  pinpoint_start_traceV1(parentId,opt1,opt2,NULL);
 // }
+// void pin_log_msg_cb(char *);
 import "C"
 import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"os"
 	"strings"
@@ -146,9 +146,9 @@ var (
 	Appid   string
 )
 
-var logEnable = strings.ToLower(os.Getenv("PINPOINT_LOG_ENABLE"))
+type LogCallBack func(format string, v ...interface{})
 
-var logCallBack = log.Printf
+var logCallBack LogCallBack = nil //log.Printf
 
 var ignoreUrls = map[string]bool{}
 
@@ -160,8 +160,16 @@ func init() {
 }
 
 func Logf(format string, v ...interface{}) {
-	if logCallBack != nil && logEnable == "true" {
+	if logCallBack != nil {
 		logCallBack(format, v...)
+	}
+}
+
+//export pin_log_msg_cb
+func pin_log_msg_cb(c *C.char) {
+
+	if logCallBack != nil {
+		logCallBack(C.GoString(c))
 	}
 }
 
@@ -174,6 +182,7 @@ func Logf(format string, v ...interface{}) {
  */
 func SetLogCallBack(callback func(format string, v ...interface{})) {
 	logCallBack = callback
+	C.register_error_cb(C.log_msg_cb(C.pin_log_msg_cb))
 }
 
 /**

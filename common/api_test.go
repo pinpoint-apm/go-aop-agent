@@ -17,6 +17,7 @@
 package common
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
@@ -220,4 +221,20 @@ func BenchmarkSetlong(b *testing.B) {
 		Pinpoint_end_trace(root)
 	}
 
+}
+
+func Test_logger(t *testing.T) {
+	Pinpoint_enable_debug_report(true)
+	called := false
+	fun := func(format string, a ...interface{}) {
+		fmt.Println(fmt.Sprintf(format, a...))
+		called = true
+	}
+	SetLogCallBack(fun)
+
+	root := Pinpoint_start_trace(ROOT_TRACE)
+	Pinpoint_end_trace(root)
+	if !called {
+		t.Fail()
+	}
 }
