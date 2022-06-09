@@ -249,3 +249,10 @@ func TestStartFailed(t *testing.T) {
 		t.Error("should return ROOT_TRACE")
 	}
 }
+
+func TestVersion(t *testing.T) {
+	if Prerequisite() == false {
+		t.Log("Prerequisite not met")
+		t.FailNow()
+	}
+}
