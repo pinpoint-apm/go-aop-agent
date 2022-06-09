@@ -541,3 +541,14 @@ func AgentIsDisabled() bool {
 func ShowAgentStatus() {
 	C.show_status()
 }
+
+func Prerequisite() bool {
+	version := C.GoString(C.pinpoint_agent_version())
+	return version >= "0.4.20"
+}
+
+func init() {
+	if !Prerequisite() {
+		panic("prerequisite not met")
+	}
+}
