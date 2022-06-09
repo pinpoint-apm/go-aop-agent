@@ -176,6 +176,7 @@ func PinTranscation(header *PinTransactionHeader, pile FuncPile, ctx context.Con
 		if header.ParentTid != "" {
 			tid = header.ParentTid
 			addClueFunc(PP_PARENT_SPAN_ID, tid)
+			addClueFunc(PP_NEXT_SPAN_ID, sid)
 		} else {
 			tid = GenerateTid()
 		}

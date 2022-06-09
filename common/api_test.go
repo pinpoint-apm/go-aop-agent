@@ -238,3 +238,14 @@ func Test_logger(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestStartFailed(t *testing.T) {
+	root := Pinpoint_start_trace(TraceIdType(1235))
+	child := Pinpoint_start_trace(root)
+	if Pinpoint_end_trace(root) != INVALIED_TRACE {
+		t.Error("should return ROOT_TRACE")
+	}
+	if Pinpoint_end_trace(child) != INVALIED_TRACE {
+		t.Error("should return ROOT_TRACE")
+	}
+}

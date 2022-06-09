@@ -137,8 +137,9 @@ const (
 type TRACE_ID_TYPE string
 
 const (
-	ROOT_TRACE               = 0
-	TRACE_ID   TRACE_ID_TYPE = "__pp_trace_id__"
+	ROOT_TRACE                   = 0
+	INVALIED_TRACE               = -1
+	TRACE_ID       TRACE_ID_TYPE = "__pp_trace_id__"
 )
 
 var (
@@ -489,9 +490,9 @@ func GetParentId(ctx context.Context) (TraceIdType, error) {
 		Logf("no parentId")
 		return TraceIdType(-1), errors.New("no parentId")
 	} else {
-		if id, OK := parentId.(TraceIdType); !OK {
-			Logf("parentId is not traceId type")
-			return TraceIdType(-1), errors.New("parentId is not traceId type")
+		if id, OK := parentId.(TraceIdType); !OK || id == TraceIdType(-1) {
+			Logf("parentId is not traceId type or invalied value")
+			return TraceIdType(-1), errors.New("parentId is not traceId type or invalied value")
 		} else {
 			return id, nil
 		}
