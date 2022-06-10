@@ -19,7 +19,6 @@ package common
 // #cgo pkg-config: pinpoint_common
 // #include <pinpoint_common/common.h>
 // #include <string.h>
-//PPAgentT global_agent_info;
 // static NodeID pinpoint_start_trace_opt(NodeID parentId, const char *opt1 , const char* opt2 ){
 // return  pinpoint_start_traceV1(parentId,opt1,opt2,NULL);
 // }
