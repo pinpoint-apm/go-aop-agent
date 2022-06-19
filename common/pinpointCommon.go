@@ -439,7 +439,9 @@ func Pinpoint_gen_tid() string {
  */
 func Pinpoint_mark_error(emsg, error_filename string, error_lineno uint32, id TraceIdType) {
 	msg := C.CString(emsg)
+	defer C.free(unsafe.Pointer(msg))
 	file_name := C.CString(error_filename)
+	defer C.free(unsafe.Pointer(file_name))
 	lineno := C.uint(error_lineno)
 	C.catch_error(C.NodeID(id), msg, file_name, lineno)
 }
