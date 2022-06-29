@@ -130,16 +130,19 @@ func GenerateTid() string {
 	return Pinpoint_gen_tid()
 }
 
-func PinTranscation(header *PinTransactionHeader, pile FuncPile, ctx context.Context) {
+func PinTranscation(header *PinTransactionHeader, pile FuncPile, parentCtx context.Context) {
 
 	catchPanic := true
 	if AgentIsDisabled() {
-		goto CALL_PILE
+		pile(parentCtx)
 	} else {
 
 		id := Pinpoint_start_trace(ROOT_TRACE)
+
+		newCtx, cancel := context.WithCancel(parentCtx)
+		defer cancel()
 		//note: update context
-		ctx = context.WithValue(ctx, TRACE_ID, id)
+		pinctx := context.WithValue(newCtx, TRACE_ID, id)
 
 		addClueFunc := func(key, value string) {
 			Pinpoint_add_clue(key, value, id, CurrentTraceLoc)
@@ -198,11 +201,10 @@ func PinTranscation(header *PinTransactionHeader, pile FuncPile, ctx context.Con
 			Pinpoint_mark_error(header.Err.Error(), "trace.go", 0, id)
 			return
 		}
+		pile(pinctx)
+		catchPanic = false
 	}
 
-CALL_PILE:
-	pile(ctx)
-	catchPanic = false
 }
 
 func GetAppName() string {
