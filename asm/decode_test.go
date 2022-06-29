@@ -24,6 +24,7 @@ package asm
 import (
 	"encoding/hex"
 	"io/ioutil"
+	"log"
 	"strconv"
 	"strings"
 	"testing"
@@ -96,10 +97,37 @@ func TestDecodeDoesNotCrash(t *testing.T) {
 		[]byte{0xc4},
 	}
 	for _, test := range cases {
-		_, err := Decode([]byte(test), 64) // the only goal is that this line does not panic
+		inst, err := Decode([]byte(test), 64) // the only goal is that this line does not panic
 		if err == nil {
 			t.Errorf("expected error on invalid instruction %x", test)
 		}
+		log.Println(inst)
+	}
+}
+
+func TestDecodeDebug(t *testing.T) {
+	cases := [...][]byte{
+		[]byte{0x64, 0x48, 0x8b, 0x0c, 0x25, 0xf8, 0xff, 0xff, 0xff},
+	}
+	for _, test := range cases {
+		inst, err := Decode([]byte(test), 64) // the only goal is that this line does not panic
+		if err != nil {
+			t.Errorf("expected error on invalid instruction %x", test)
+		}
+		log.Println(inst)
+	}
+}
+
+func TestGODecodeDebug(t *testing.T) {
+	cases := [...][]byte{
+		[]byte{0x64, 0x48, 0x8b, 0x0c, 0x25, 0xf8, 0xff, 0xff, 0xff},
+	}
+	for _, test := range cases {
+		inst, err := x86asm.Decode([]byte(test), 64) // the only goal is that this line does not panic
+		if err != nil {
+			t.Errorf("expected error on invalid instruction %x", test)
+		}
+		log.Println(inst)
 	}
 }
 

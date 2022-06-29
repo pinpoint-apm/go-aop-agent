@@ -24,7 +24,7 @@ import (
 	"github.com/pinpoint-apm/go-aop-agent/common"
 )
 
-// #cgo CFLAGS: -DNTEST
+// #cgo CFLAGS: -DNTEST -DTRACE
 // #include "pinpoint.h"
 import "C"
 
