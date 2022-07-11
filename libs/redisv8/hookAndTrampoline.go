@@ -52,7 +52,7 @@ func (p *ppRedisHook) BeforeProcess(ctx context.Context, cmd redis.Cmder) (conte
 		// 	common.Pinpoint_add_clues(key, value, id, common.CurrentTraceLoc)
 		// }
 
-		addClueFunc(common.PP_INTERCEPTOR_NAME, fmt.Sprint(cmd.Args()[0]))
+		addClueFunc(common.PP_INTERCEPTOR_NAME, cmd.Name())
 		addClueFunc(common.PP_SERVER_TYPE, common.PP_REDIS)
 		addClueFunc(common.PP_DESTINATION, p.Addr)
 		// addClueSFunc(common.PP_ARGS, cmd.String())
@@ -74,15 +74,27 @@ func (p *ppRedisHook) AfterProcess(ctx context.Context, cmd redis.Cmder) error {
 	addClueFunc := func(key, value string) {
 		common.Pinpoint_add_clue(key, value, id, common.CurrentTraceLoc)
 	}
-	cmdStr := cmd.String()
-	cmdSize := len(cmdStr)
-	if cmdSize > 100 {
-		cmdSize = 100
+
+	if cmd.Name() == "eval" {
+		var keys string
+		for i, arg := range cmd.Args() {
+			keys += fmt.Sprintf(" %d:%v ", i, arg)
+		}
+
+		addClueSFunc(common.PP_RETURN, keys)
+	} else { // maximum is 100
+		cmdStr := cmd.String()
+		cmdSize := len(cmdStr)
+		if cmdSize > 100 {
+			cmdSize = 100
+		}
+
+		addClueSFunc(common.PP_RETURN, cmdStr[:cmdSize])
 	}
-	addClueSFunc(common.PP_RETURN, cmdStr[:cmdSize])
 
 	if cmd.Err() != nil {
 		addClueFunc(common.PP_ADD_EXCEPTION, cmd.Err().Error())
+		common.Pinpoint_mark_error(cmd.Err().Error(), fmt.Sprint(cmd.Args()[0]), 0, id)
 	}
 	common.Pinpoint_end_trace(id)
 	return nil
@@ -121,6 +133,7 @@ func (p *ppRedisHook) AfterProcessPipeline(ctx context.Context, cmds []redis.Cmd
 	for _, cmd := range cmds {
 		if cmd.Err() != nil {
 			addClueFunc(common.PP_ADD_EXCEPTION, cmd.Err().Error())
+			common.Pinpoint_mark_error(cmd.Err().Error(), "pipeline", 0, id)
 			break // only catch the first error
 		}
 	}
