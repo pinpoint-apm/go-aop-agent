@@ -26,6 +26,37 @@ import (
 
 func init() {
 	hook_common_func((*kafka.Reader).CommitMessages, hook_commitMessages, hook_commitMessages_trampoline)
+	hook_common_func((*kafka.Writer).WriteMessages, hook_writeMessages, hook_writeMessages_trampoline)
+}
+
+//go:noinline
+func hook_writeMessages(writer *kafka.Writer, ctx context.Context, msgs ...kafka.Message) error {
+	funcName := "kafka.Writer.WriteMessages"
+	if parentId, err := common.GetParentId(ctx); err != nil {
+		common.Logf("parentId is not traceId type")
+		return hook_writeMessages_trampoline(writer, ctx, msgs...)
+	} else {
+		if common.Pinpoint_get_context(common.PP_HEADER_PINPOINT_SAMPLED, parentId) == common.PP_NOT_SAMPLED {
+			common.Logf("trace dropped")
+			return hook_writeMessages_trampoline(writer, ctx, msgs...)
+		}
+
+		subTraceId := common.Pinpoint_start_trace(parentId)
+		defer common.Pinpoint_end_trace(subTraceId)
+
+		newCtx := writeMessages_onBefore(subTraceId, funcName, writer, ctx, msgs...)
+		err := hook_writeMessages_trampoline(writer, newCtx, msgs...)
+		if err != nil {
+			onException(subTraceId, &err)
+		}
+		commitMessages_onEnd(subTraceId, err)
+		return err
+	}
+}
+
+//go:noinline
+func hook_writeMessages_trampoline(writer *kafka.Writer, ctx context.Context, msgs ...kafka.Message) error {
+	return errors.New("")
 }
 
 //go:noinline
