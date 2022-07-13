@@ -48,6 +48,29 @@ func commitMessages_onBefore(id common.TraceIdType, funcName string, reader *kaf
 	return newCtx
 }
 
+func writeMessages_onBefore(id common.TraceIdType, funcName string, writer *kafka.Writer, ctx context.Context, mesg ...kafka.Message) context.Context {
+	addClueFunc := func(key, value string) {
+		common.Pinpoint_add_clue(key, value, id, common.CurrentTraceLoc)
+	}
+
+	addClueSFunc := func(key, value string) {
+		common.Pinpoint_add_clues(key, value, id, common.CurrentTraceLoc)
+	}
+	addClueFunc(common.PP_INTERCEPTOR_NAME, funcName)
+
+	addClueFunc(common.PP_SERVER_TYPE, common.PP_KAFKA)
+
+	if len(writer.Topic) > 0 {
+		addClueSFunc(common.PP_KAFKA_TOPIC, writer.Topic)
+	}
+	addClueFunc(common.PP_DESTINATION, writer.Addr.String())
+	// note: pinpoint-web can not show args,so use return
+	addClueSFunc(common.PP_RETURN, fmt.Sprintf("writeMessages:[%d] ...", len(mesg)))
+
+	newCtx := context.WithValue(ctx, common.TRACE_ID, id)
+	return newCtx
+}
+
 func commitMessages_onEnd(id common.TraceIdType, err error) {
 	// addClueSFunc := func(key, value string) {
 	// 	common.Pinpoint_add_clues(key, value, id, common.CurrentTraceLoc)

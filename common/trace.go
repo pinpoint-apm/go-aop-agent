@@ -124,15 +124,13 @@ func PinFuncOnce(ctx context.Context, name string, args ...interface{}) (context
 	}
 }
 
-type FuncPile func(context.Context)
+type FuncPile func(context.Context) error
 
 func GenerateTid() string {
 	return Pinpoint_gen_tid()
 }
 
 func PinTranscation(header *PinTransactionHeader, pile FuncPile, parentCtx context.Context) {
-
-	catchPanic := true
 	if AgentIsDisabled() {
 		pile(parentCtx)
 	} else {
@@ -187,22 +185,21 @@ func PinTranscation(header *PinTransactionHeader, pile FuncPile, parentCtx conte
 		addClueFunc(PP_TRANSCATION_ID, tid)
 		Pinpoint_set_context(PP_TRANSCATION_ID, tid, id)
 		// end transcation
-
+		catchPanic := true
 		defer func() {
 			if catchPanic {
 				Pinpoint_mark_error("PinpointMiddleWare found a panic! o_o ....", "", 0, id)
 			}
 			Pinpoint_end_trace(id)
 		}()
-		// note: must be an error
-		// just return
-		if header.Err != nil {
-			catchPanic = false
-			Pinpoint_mark_error(header.Err.Error(), "trace.go", 0, id)
-			return
-		}
-		pile(pinctx)
+
+		err := pile(pinctx)
 		catchPanic = false
+		if err != nil {
+			Pinpoint_mark_error(err.Error(), "trace.go", 0, id)
+		} else if header.Err != nil {
+			Pinpoint_mark_error(header.Err.Error(), "trace.go", 0, id)
+		}
 	}
 
 }
