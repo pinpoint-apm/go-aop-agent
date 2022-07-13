@@ -94,8 +94,9 @@ func TestCallsth(t *testing.T) {
 		ParentName: "kafka",
 	}
 
-	pile := func(ctx context.Context) {
+	pile := func(ctx context.Context) error {
 		callSth(ctx, 19, "xxx")
+		return nil
 	}
 
 	PinTranscation(&trans, pile, ctx)

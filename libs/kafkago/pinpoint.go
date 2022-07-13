@@ -64,7 +64,8 @@ func writeMessages_onBefore(id common.TraceIdType, funcName string, writer *kafk
 		addClueSFunc(common.PP_KAFKA_TOPIC, writer.Topic)
 	}
 	addClueFunc(common.PP_DESTINATION, writer.Addr.String())
-	addClueSFunc(common.PP_ARGS, fmt.Sprintf("writeMessages:%d ...", len(mesg)))
+	// note: pinpoint-web can not show args,so use return
+	addClueSFunc(common.PP_RETURN, fmt.Sprintf("writeMessages:[%d] ...", len(mesg)))
 
 	newCtx := context.WithValue(ctx, common.TRACE_ID, id)
 	return newCtx
