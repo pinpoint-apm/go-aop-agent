@@ -30,6 +30,7 @@ import (
 
 func init() {
 	hook_common_func(redis.NewClient, hook_newclient, hook_newclient_trampoline)
+	hook_common_func(redis.NewClusterClient, hook_newclientcluster, hook_newclientcluster_trampoline)
 }
 
 type ppRedisHook struct {
@@ -78,6 +79,10 @@ func (p *ppRedisHook) AfterProcess(ctx context.Context, cmd redis.Cmder) error {
 	if cmd.Name() == "eval" {
 		var keys string
 		for i, arg := range cmd.Args() {
+			if i <= 1 {
+				// drop eval script
+				continue
+			}
 			keys += fmt.Sprintf(" %d:%v ", i, arg)
 		}
 
@@ -151,6 +156,21 @@ func hook_newclient_trampoline(opt *redis.Options) *redis.Client {
 func hook_newclient(opt *redis.Options) *redis.Client {
 	c := hook_newclient_trampoline(opt)
 	addr := fmt.Sprintf("redis:%s(%d)", opt.Addr, opt.DB)
+	ppHook := &ppRedisHook{Addr: addr}
+	c.AddHook(ppHook)
+
+	return c
+}
+
+//go:noinline
+func hook_newclientcluster_trampoline(opt *redis.ClusterOptions) *redis.ClusterClient {
+	return nil
+}
+
+//go:noinline
+func hook_newclientcluster(opt *redis.ClusterOptions) *redis.ClusterClient {
+	c := hook_newclientcluster_trampoline(opt)
+	addr := fmt.Sprintf("redis:%s", opt.Addrs[0])
 	ppHook := &ppRedisHook{Addr: addr}
 	c.AddHook(ppHook)
 
