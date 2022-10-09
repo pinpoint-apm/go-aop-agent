@@ -53,6 +53,10 @@ func PinpointMiddleWareV4(next echo.HandlerFunc) echo.HandlerFunc {
 				common.Pinpoint_mark_error("PinpointMiddleWare found a panic! o_o ....", "", 0, id)
 			}
 
+			if err != nil {
+				common.Pinpoint_mark_error(err.Error(), "", 0, id)
+			}
+
 			if c.Response() != nil {
 				common.Pinpoint_add_clues(common.PP_HTTP_STATUS_CODE, strconv.Itoa(c.Response().Status), id, common.CurrentTraceLoc)
 			}
