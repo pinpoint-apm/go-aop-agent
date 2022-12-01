@@ -83,6 +83,11 @@ func onEnd_Do(id common.TraceIdType, response *http.Response, err *error) {
 	}
 
 	addClueSFunc(common.PP_HTTP_STATUS_CODE, response.Status)
+
+	if response.StatusCode >= http.StatusBadRequest {
+		common.Pinpoint_mark_error("response code:"+response.Status, "clientDo.go", 0, id)
+	}
+
 	common.Pinpoint_end_trace(id)
 }
 
