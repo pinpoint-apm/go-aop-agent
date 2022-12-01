@@ -18,6 +18,7 @@ package echo
 
 import (
 	"context"
+	"net/http"
 	"strconv"
 
 	"github.com/labstack/echo"
@@ -49,15 +50,19 @@ func PinpointMiddleWare(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 		catchPanic := true
 		defer func() {
+			if c.Response() != nil {
+				common.Pinpoint_add_clues(common.PP_HTTP_STATUS_CODE, strconv.Itoa(c.Response().Status), id, common.CurrentTraceLoc)
+
+				if c.Response().Status >= http.StatusBadRequest {
+					common.Pinpoint_mark_error("request failed", "PinpointMiddleWare", 0, id)
+				}
+			}
+
 			if catchPanic {
 				common.Pinpoint_mark_error("PinpointMiddleWare found a panic! o_o ....", "", 0, id)
 			}
 
-			if c.Response() != nil {
-				common.Pinpoint_add_clues(common.PP_HTTP_STATUS_CODE, strconv.Itoa(c.Response().Status), id, common.CurrentTraceLoc)
-			}
 			common.Pinpoint_end_trace(id)
-			// common.Logf("end trace:%d", id)
 		}()
 
 		nCtx := context.WithValue(c.Request().Context(), common.TRACE_ID, id)
