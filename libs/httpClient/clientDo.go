@@ -82,11 +82,13 @@ func onEnd_Do(id common.TraceIdType, response *http.Response, err *error) {
 		addClueFunc(common.PP_NEXT_SPAN_ID, value)
 	}
 
-	addClueSFunc(common.PP_HTTP_STATUS_CODE, response.Status)
+	if response != nil {
+		addClueSFunc(common.PP_HTTP_STATUS_CODE, response.Status)
 
-	if response.StatusCode >= http.StatusBadRequest {
-		//common.Pinpoint_mark_error("response code:"+response.Status, "clientDo.go", 0, id)
-		addClueFunc(common.PP_ADD_EXCEPTION, "response status:"+response.Status)
+		if response.StatusCode >= http.StatusBadRequest {
+			//common.Pinpoint_mark_error("response code:"+response.Status, "clientDo.go", 0, id)
+			addClueFunc(common.PP_ADD_EXCEPTION, "response status:"+response.Status)
+		}
 	}
 
 	common.Pinpoint_end_trace(id)
